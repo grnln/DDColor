@@ -13,7 +13,7 @@ datasets:
     name: dataset_name
     type: LabDataset
     dataroot_gt: /
-    meta_info_file: ["datasets/dataset_name.txt"]
+    meta_info_file: ["datasets/marvel_meta.txt"]
     io_backend:
       type: disk
 
@@ -38,21 +38,20 @@ datasets:
     prefetch_mode: ~
 
   # Uncomment these for validation
-  #val:
-  #  name: dataset_name
-  #  type: LabDataset
-  # dataroot_gt: path_to_gt
-  #  dataroot_gt: /
-  #  meta_info_file: ["datasets/dataset_name.txt"]
-  #  gt_size: 256
-  #  io_backend:
-  #    type: disk
+  val:
+    name: dataset_name
+    type: LabDataset
+    dataroot_gt: /
+    meta_info_file: ["datasets/marvel_meta.txt"]
+    gt_size: 256
+    io_backend:
+      type: disk
 
-  # cutmix / fmix
-  #  do_cutmix: False
-  #  cutmix_p: 0.5
-  #  do_fmix: False
-  #  fmix_p: 0.5
+    # cutmix / fmix
+    do_cutmix: False
+    cutmix_p: 0.5
+    do_fmix: False
+    fmix_p: 0.5
 
 # network structures
 network_g:
@@ -98,11 +97,11 @@ train:
 
   scheduler:
     type: MultiStepLR
-    milestones: [80000, 120000, 160000, 200000, 240000, 280000, 320000, 360000]
+    milestones: [50000, 75000, 100000, 125000, 150000]
     gamma: 0.5
 
-  total_iter: 4000
-  warmup_iter: -1 # no warm up
+  total_iter: 200000
+  warmup_iter: 1000
 
   # losses
   pixel_opt:
@@ -133,10 +132,9 @@ train:
     type: ColorfulnessLoss
     loss_weight: 0.5
 
-# Uncomment these for validation
 # validation settings
 val:
-  val_freq: !!float 1e4
+  val_freq: 5000
   save_img: False
   pbar: True
 
@@ -169,3 +167,4 @@ dist_params:
   port: 29500
 
 find_unused_parameters: true
+auto_resume: True
