@@ -13,7 +13,7 @@ datasets:
     name: dataset_name
     type: LabDataset
     dataroot_gt: /
-    meta_info_file: ["datasets/marvel_meta.txt"]
+    meta_info_file: ["datasets/comics_meta.txt"]
     io_backend:
       type: disk
 
@@ -42,7 +42,7 @@ datasets:
     name: dataset_name
     type: LabDataset
     dataroot_gt: /
-    meta_info_file: ["datasets/marvel_meta.txt"]
+    meta_info_file: ["datasets/test_meta.txt"]
     gt_size: 256
     io_backend:
       type: disk
@@ -134,7 +134,7 @@ train:
 
 # validation settings
 val:
-  val_freq: 5000
+  val_freq: 20000
   save_img: False
   pbar: True
 
@@ -155,7 +155,7 @@ logger:
   print_freq: 100
   save_snapshot_freq: !!float 1e3
   save_snapshot_verbose: True
-  save_checkpoint_freq: !!float 1e4
+  save_checkpoint_freq: !!float 2e4
   use_tb_logger: true
   wandb:
     project: ~
