@@ -1,71 +1,58 @@
-# 🎨 DDColor
-[![arXiv](https://img.shields.io/badge/arXiv-2212.11613-b31b1b.svg)](https://arxiv.org/abs/2212.11613)
-[![HuggingFace](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-FF8000)](https://huggingface.co/piddnad/DDColor-models)
-[![ModelScope demo](https://img.shields.io/badge/%F0%9F%91%BE%20ModelScope-Demo-8A2BE2)](https://www.modelscope.cn/models/damo/cv_ddcolor_image-colorization/summary)
-[![Replicate](https://replicate.com/piddnad/ddcolor/badge)](https://replicate.com/piddnad/ddcolor)
-![visitors](https://visitor-badge.laobi.icu/badge?page_id=piddnad/DDColor)
+# Extendiendo DDColor: Análisis e investigación de las limitaciones del modelo.
 
-Official PyTorch implementation of ICCV 2023 Paper "DDColor: Towards Photo-Realistic Image Colorization via Dual Decoders".
+> Grupo 7: Alejandro Parody Quirós, Guillermo Rodríguez Narbona , José Carlos Mora López
 
-> Xiaoyang Kang, Tao Yang, Wenqi Ouyang, Peiran Ren, Lingzhi Li, Xuansong Xie  
-> *DAMO Academy, Alibaba Group*
+Este repositorio contiene el trabajo realizado por el grupo 7 de la asignatura de "Procesamiento de Imágenes Digitales", del grado Ingeniería Informatica del Software, de la Universidad de Sevilla.
 
-🪄 DDColor can provide vivid and natural colorization for historical black and white old photos.
+Fundamentalmente se trata de una extensión de la implementación de DDColor, propuesto en el paper "DDColor: Towards Photo-Realistic Image Colorization via Dual Decoders", de los autores Xiaoyang Kang, Tao Yang, Wenqi Ouyang, Peiran Ren, Lingzhi Li, Xuansong Xie.
 
-<p align="center">
-  <img src="assets/teaser.webp" width="100%">
-</p>
+Artículo disponible en: https://arxiv.org/abs/2212.11613
 
-🎲 It can even colorize/recolor landscapes from anime games, transforming your animated scenery into a realistic real-life style! (Image source: Genshin Impact)
+Implementación disponible en: https://github.com/piddnad/DDColor
 
-<p align="center">
-  <img src="assets/anime_landscapes.webp" width="100%">
-</p>
+## Propuesta y objetivos
 
+>Importante: tanto los cambios en el código como los reentrenamientos del modelo están todavía en ejecución y, de momento, puede ocurrir que no satisfaga las propuesta planteada en este apartado.
 
-## News
-- [2024-01-28] Support inference via 🤗 Hugging Face! Thanks @[Niels](https://github.com/NielsRogge) for the suggestion and example code and @[Skwara](https://github.com/Skwarson96) for fixing bug.
-- [2024-01-18] Add Replicate demo and API! Thanks @[Chenxi](https://github.com/chenxwh).
-- [2023-12-13] Release the DDColor-tiny pre-trained model!
-- [2023-09-07] Add the Model Zoo and release three pretrained models!
-- [2023-05-15] Code release for training and inference!
-- [2023-05-05] The online demo is available!
+Este trabajo pretende analizar dos limitaciones del modelo original. 
 
+Por un lado trataremos el comportamiento del modelo en ámbitos en los que no ha sido entrenado. Con esto nos referimos concretamente a evaluar el funcionamiento del modelo ante imágenes de
+naturaleza *no fotorrealista* (otros estilos gráficos, i.e. viñetas de comic). 
 
-## Online Demo
-Try our online demos at [ModelScope](https://www.modelscope.cn/models/damo/cv_ddcolor_image-colorization/summary) and [Replicate](https://replicate.com/piddnad/ddcolor).
+Por el otro lado, se analiza una limitación propuesta en el paper orignal, sobre artefactos que alteran la colorizacion cuando aparecen elementos que presentan trasparencias. 
 
+Para ello resulta fundamental a su vez conocer las métricas de evaluación de imágenes para hacer una correcta comparativa de los resultados obtenidos. Se añade al código a su vez los cálculos de dichas métricas.
 
-## Methods
-*In short:* DDColor uses multi-scale visual features to optimize **learnable color tokens** (i.e. color queries) and achieves state-of-the-art performance on automatic image colorization.
+Finalmente, trabajamos también sobre una interfaz gráfica que permita usar el modelo de una forma más sencilla.
 
-<p align="center">
-  <img src="assets/network_arch.jpg" width="100%">
-</p>
-
-
-## Installation
-### Requirements
+## Instalación
+### Requisitos
 - Python >= 3.7
 - PyTorch >= 1.7
 
-### Installation with conda (recommended)
+### Instalación con Conda (Recomendado)
 
-```sh
+```
 conda create -n ddcolor python=3.9
 conda activate ddcolor
 pip install torch==2.2.0 torchvision==0.17.0 --index-url https://download.pytorch.org/whl/cu118
 
 pip install -r requirements.txt
 
-# For training, install the following additional dependencies and basicsr
+# Para realizar entrenamientos, instala el siguiente contenido adicional, dependencias y basicsr
+
 pip install -r requirements.train.txt
 python3 setup.py develop
 ```
 
-## Quick Start
-### Inference Using Local Script (No `basicsr` Required)
-1. Download the pretrained model:
+## Nuestro modelo
+
+Aquí aparecerá información sobre como descargar y utilizar el modelo que nosotros hemos entrenado en el dominio *no fotorrealista*  tan pronto como consigamos subirlo a Internet.
+
+## Inicio rápido del modelo original
+### Usar el modelo entrenado original con un script local (No `basicsr` Required)
+
+1. Descargar el modelo preentrenado. Para ello hacer y correr un script de python con el siguiente contenido.
 
 ```python
 from modelscope.hub.snapshot_download import snapshot_download
@@ -74,18 +61,18 @@ model_dir = snapshot_download('damo/cv_ddcolor_image-colorization', cache_dir='.
 print('model assets saved to %s' % model_dir)
 ```
 
-2.	Run inference with
+2.	Correr inference con:
 
 ```sh
 python scripts/infer.py --model_path ./modelscope/damo/cv_ddcolor_image-colorization/pytorch_model.pt --input ./assets/test_images
 ```
-or
+o
 ```sh
 sh scripts/inference.sh
 ```
 
-### Inference Using Hugging Face 
-Load the model via Hugging Face Hub:
+### Usar modelo original ya entrenado desde Hugging Face 
+Descargar el modelo via Hugging Face Hub:
 
 ```python
 from huggingface_hub import PyTorchModelHubMixin
@@ -103,21 +90,21 @@ ddcolor_modelscope = DDColorHF.from_pretrained("piddnad/ddcolor_modelscope")
 ddcolor_artistic   = DDColorHF.from_pretrained("piddnad/ddcolor_artistic")
 ```
 
-Or directly perform model inference by running:
+O correr el modelo preentrenado directamente, ejecutando: 
 
 ```sh
 python scripts/infer.py --model_name ddcolor_modelscope --input ./assets/test_images
 # model_name: [ddcolor_paper | ddcolor_modelscope | ddcolor_artistic | ddcolor_paper_tiny]
 ```
 
-### Inference Using ModelScope
-1. Install modelscope:
+### Usar modelo original ya entrenado desde ModelScope
+1. Instalar modelscope:
 
 ```sh
 pip install modelscope
 ```
 
-2. Run inference:
+2. Correr el modelo:
 
 ```python
 import cv2
@@ -130,77 +117,7 @@ result = img_colorization('https://modelscope.oss-cn-beijing.aliyuncs.com/test/i
 cv2.imwrite('result.png', result[OutputKeys.OUTPUT_IMG])
 ```
 
-This code will automatically download the `ddcolor_modelscope` model (see [ModelZoo](#model-zoo)) and performs inference. The model file `pytorch_model.pt` can be found in the local path `~/.cache/modelscope/hub/damo`.
+Este código descargará automáticamente el modelo ddcolor_modelscope (ver ModelZoo) y realizará la inferencia. El archivo del modelo pytorch_model.pt se puede encontrar en la ruta local ~/.cache/modelscope/hub/damo.
 
-### Gradio Demo
-Install the gradio and other required libraries:
-
-```sh
-pip install gradio gradio_imageslider
-```
-
-Then, you can run the demo with the following command:
-
-```sh
-python demo/gradio_app.py
-```
-
-## Model Zoo
-We provide several different versions of pretrained models, please check out [Model Zoo](MODEL_ZOO.md).
-
-
-## Train
-1. Dataset Preparation: Download the [ImageNet](https://www.image-net.org/) dataset or create a custom dataset. Use this script to obtain the dataset list file:
-
-```sh
-python scripts/get_meta_file.py
-```
-
-2. Download the pretrained weights for [ConvNeXt](https://dl.fbaipublicfiles.com/convnext/convnext_large_22k_224.pth) and [InceptionV3](https://download.pytorch.org/models/inception_v3_google-1a9a5a14.pth) and place them in the `pretrain` folder.
-
-3. Specify 'meta_info_file' and other options in `options/train/train_ddcolor.yml`.
-
-4. Start training:
-
-```sh
-sh scripts/train.sh
-```
-
-## ONNX export
-Support for ONNX model exports is available.
-
-1.	Install dependencies:
-
-```sh
-pip install onnx==1.16.1 onnxruntime==1.19.2 onnxsim==0.4.36
-```
-
-2. Usage example:
-
-```sh
-python scripts/export_onnx.py --model_path pretrain/ddcolor_paper_tiny.pth --export_path weights/ddcolor-tiny.onnx
-```
-
-Demo of ONNX export using a `ddcolor_paper_tiny` model is available [here](demo/colorization_pipeline_onnxruntime.ipynb).
-
-
-## Citation
-
-If our work is helpful for your research, please consider citing:
-
-```
-@inproceedings{kang2023ddcolor,
-  title={DDColor: Towards Photo-Realistic Image Colorization via Dual Decoders},
-  author={Kang, Xiaoyang and Yang, Tao and Ouyang, Wenqi and Ren, Peiran and Li, Lingzhi and Xie, Xuansong},
-  booktitle={Proceedings of the IEEE/CVF International Conference on Computer Vision},
-  pages={328--338},
-  year={2023}
-}
-```
-
-## Acknowledgments
-We thank the authors of BasicSR for the awesome training pipeline.
-
-> Xintao Wang, Ke Yu, Kelvin C.K. Chan, Chao Dong and Chen Change Loy. BasicSR: Open Source Image and Video Restoration Toolbox. https://github.com/xinntao/BasicSR, 2020.
-
-Some codes are adapted from [ColorFormer](https://github.com/jixiaozhong/ColorFormer), [BigColor](https://github.com/KIMGEONUNG/BigColor), [ConvNeXt](https://github.com/facebookresearch/ConvNeXt), [Mask2Former](https://github.com/facebookresearch/Mask2Former), and [DETR](https://github.com/facebookresearch/detr). Thanks for their excellent work!
+## Más información
+Para acceder a información sobre otros modelos entrenados, como entrenar tu modelo propio, o exportar a ONXX, recomendamos acceder al repositorio original disponible al inicio de este documento.
