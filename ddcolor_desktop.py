@@ -4,6 +4,7 @@ DDColor Lab — Aplicación de escritorio
 Coloca los pesos en ./models/:
     models/ddcolor_comic.pth        (tu fine-tune, guardado por BasicSR)
     models/ddcolor_realistic.pth    (modelo oficial ModelScope / HuggingFace)
+    models/ddcolor_artistic.pth     (modelo artístico ModelScope / HuggingFace)
 
     Ambos pueden ser 'large' (convnext-l) o 'tiny' (convnext-t).
     La app detecta el tamaño automáticamente por el nombre del fichero.
@@ -54,6 +55,7 @@ AMBER   = "#e8a535"
 RED     = "#e05a5a"
 COMIC   = "#4f7aff"
 REAL    = "#9d7fe8"
+ART     = "#ff7a4f"  # NUEVO
 
 MODELS_DIR  = Path("./models")
 PREVIEW_W   = 360
@@ -67,16 +69,10 @@ THUMB_H     = 120
 # ═════════════════════════════════════════════════════════════════════════════
 
 def detect_model_size(path: Path) -> str:
-    """Detecta si el checkpoint es tiny o large por nombre de fichero."""
     return "tiny" if "tiny" in path.stem.lower() else "large"
 
 
 def try_load_pipeline(path: Path, input_size: int = 512):
-    """
-    Carga el modelo usando exactamente el mismo código que infer.py del proyecto:
-      build_ddcolor_model()  →  ColorizationPipeline()
-    Devuelve un ColorizationPipeline listo para llamar a .process(img_bgr).
-    """
     if not path.exists():
         return None
     try:
@@ -97,40 +93,27 @@ def try_load_pipeline(path: Path, input_size: int = 512):
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Métricas — las que usa el proyecto + las que desarrollamos antes
+# Métricas
 # ═════════════════════════════════════════════════════════════════════════════
-
+ 
 def colorfulness_score(img_bgr: np.ndarray) -> float:
-    """
-    Hasler & Süsstrunk (2003).
-    El proyecto usa esta métrica como 'CF score' en sus evaluaciones.
-    Mayor = más colorido.
-    """
     img = img_bgr.astype(float)
     R, G, B = img[:,:,2], img[:,:,1], img[:,:,0]
     rg  = R - G
     yb  = 0.5*(R+G) - B
     return float(np.sqrt(np.std(rg)**2 + np.std(yb)**2)
                  + 0.3 * np.sqrt(np.mean(rg)**2 + np.mean(yb)**2))
-
-
+ 
+ 
 def fid_proxy(img_bgr: np.ndarray) -> float:
-    """
-    Proxy de FID: diversidad de features de color en el espacio LAB.
-    Equivale a la varianza total de los canales AB — correlaciona con FID real.
-    """
     if not SKIMAGE_OK:
         return 0.0
     lab = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2Lab).astype(float)
     ab  = lab[:, :, 1:]
     return float(np.std(ab))
-
-
+ 
+ 
 def psnr_ssim(pred_bgr: np.ndarray, gt_bgr: np.ndarray):
-    """
-    PSNR y SSIM — métricas estándar del proyecto (reportadas en el paper).
-    Necesitan ground truth.
-    """
     try:
         from skimage.metrics import peak_signal_noise_ratio, structural_similarity
         gt_rs = cv2.resize(gt_bgr, (pred_bgr.shape[1], pred_bgr.shape[0]))
@@ -139,22 +122,18 @@ def psnr_ssim(pred_bgr: np.ndarray, gt_bgr: np.ndarray):
         return psnr, ssim
     except Exception:
         return None, None
-
-
+ 
+ 
 def chrominance_mae(pred_bgr: np.ndarray, gt_bgr: np.ndarray):
-    """Error medio en canales AB del espacio LAB."""
     gt_rs    = cv2.resize(gt_bgr, (pred_bgr.shape[1], pred_bgr.shape[0]))
     pred_lab = cv2.cvtColor(pred_bgr, cv2.COLOR_BGR2Lab).astype(float)
     gt_lab   = cv2.cvtColor(gt_rs,   cv2.COLOR_BGR2Lab).astype(float)
     chroma = float(np.mean(np.abs(pred_lab[:,:,1:] - gt_lab[:,:,1:])))
     luma   = float(np.mean(np.abs(pred_lab[:,:,0]  - gt_lab[:,:,0])))
     return chroma, luma
-
-
+ 
+ 
 def color_consistency(img_bgr: np.ndarray, n: int = 150) -> float | None:
-    """
-    Varianza intra-región (SLIC). Menor = colores más planos = más estilo cómic.
-    """
     if not SKIMAGE_OK:
         return None
     img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
@@ -163,8 +142,8 @@ def color_consistency(img_bgr: np.ndarray, n: int = 150) -> float | None:
     v = [float(np.var(lab[segs==s, 1:]))
          for s in np.unique(segs) if (segs==s).sum() >= 5]
     return float(np.mean(v)) if v else None
-
-
+ 
+ 
 def compute_metrics(pred_bgr: np.ndarray, gt_bgr: np.ndarray | None) -> dict:
     m = {
         "colorfulness": colorfulness_score(pred_bgr),
@@ -179,27 +158,27 @@ def compute_metrics(pred_bgr: np.ndarray, gt_bgr: np.ndarray | None) -> dict:
         m["psnr"], m["ssim"]           = psnr_ssim(pred_bgr, gt_bgr)
         m["chroma_mae"], m["luma_mae"] = chrominance_mae(pred_bgr, gt_bgr)
     return m
-
-
+ 
+ 
 # ═════════════════════════════════════════════════════════════════════════════
 # Helpers UI
 # ═════════════════════════════════════════════════════════════════════════════
 
-def bgr_to_photoimage(img_bgr: np.ndarray, w: int, h: int) -> ImageTk.PhotoImage:
-    pil = Image.fromarray(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB))
-    pil.thumbnail((w, h), Image.LANCZOS)
+def bgr_to_pil(img_bgr: np.ndarray) -> Image.Image:
+    return Image.fromarray(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB))
+
+
+def fit_image(img_pil: Image.Image, w: int, h: int) -> ImageTk.PhotoImage:
+    """Escala la imagen manteniendo aspect ratio para llenar (w, h)."""
     canvas = Image.new("RGB", (w, h), BG2)
-    ox, oy = (w - pil.width)//2, (h - pil.height)//2
-    canvas.paste(pil, (ox, oy))
-    return ImageTk.PhotoImage(canvas)
-
-
-def pil_to_photoimage(img_pil: Image.Image, w: int, h: int) -> ImageTk.PhotoImage:
     img_pil.thumbnail((w, h), Image.LANCZOS)
-    canvas = Image.new("RGB", (w, h), BG2)
-    ox, oy = (w - img_pil.width)//2, (h - img_pil.height)//2
+    ox, oy = (w - img_pil.width) // 2, (h - img_pil.height) // 2
     canvas.paste(img_pil, (ox, oy))
     return ImageTk.PhotoImage(canvas)
+
+
+def bgr_to_photoimage(img_bgr: np.ndarray, w: int, h: int) -> ImageTk.PhotoImage:
+    return fit_image(bgr_to_pil(img_bgr), w, h)
 
 
 def placeholder(w: int, h: int, text: str) -> ImageTk.PhotoImage:
@@ -233,11 +212,16 @@ class App(tk.Tk):
         self.minsize(1020, 700)
 
         # Estado
-        self._input_bgr  = None     # numpy BGR
-        self._gt_bgr     = None
+        self._input_bgr  = None
+        self._gt_bgr     = None          # CAMBIO: se auto-rellena con la imagen de entrada
         self._comic_bgr  = None
         self._real_bgr   = None
-        self._pipes      = {"comic": None, "realistic": None}
+        self._art_bgr    = None          # NUEVO
+        self._pipes      = {"comic": None, "realistic": None, "artistic": None}  # NUEVO
+
+        # Tamaños actuales de los paneles de previsualización (se actualizan con resize)
+        self._preview_w  = 360
+        self._preview_h  = 280
 
         MODELS_DIR.mkdir(exist_ok=True)
 
@@ -250,6 +234,9 @@ class App(tk.Tk):
 
         self._build_ui()
         self._load_models_bg()
+
+        # Escuchar cambios de tamaño de ventana
+        self._resize_after = None
 
     # ── UI principal ──────────────────────────────────────────────────────────
 
@@ -295,7 +282,7 @@ class App(tk.Tk):
     # ── Tab 1 ─────────────────────────────────────────────────────────────────
 
     def _build_main(self, parent):
-        left  = tk.Frame(parent, bg=BG2, width=210)
+        left = tk.Frame(parent, bg=BG2, width=210)
         right = tk.Frame(parent, bg=BG)
         left.pack(side="left", fill="y")
         left.pack_propagate(False)
@@ -305,11 +292,11 @@ class App(tk.Tk):
         # ── Panel izquierdo ───────────────────────────────────────────────────
         section_bar(left, "ENTRADA")
 
-        # Thumbnail clickeable
         frm_thumb = tk.Frame(left, bg=BG3, width=THUMB_W, height=THUMB_H)
         frm_thumb.pack(pady=6)
         frm_thumb.pack_propagate(False)
-        self._lbl_input = tk.Label(frm_thumb, image=self._ph["input"],
+        self._ph_input = placeholder(THUMB_W, THUMB_H, "Abrir imagen")
+        self._lbl_input = tk.Label(frm_thumb, image=self._ph_input,
                                    bg=BG3, cursor="hand2")
         self._lbl_input.pack(expand=True)
         self._lbl_input.bind("<Button-1>", lambda _: self._open_input())
@@ -322,6 +309,7 @@ class App(tk.Tk):
             command=self._open_input
         ).pack(fill="x", padx=12, pady=(2, 0))
 
+        # CAMBIO: GT opcional — ahora se auto-rellena con la imagen de entrada
         section_bar(left, "GROUND TRUTH")
         tk.Button(
             left, text="Abrir GT (opcional)",
@@ -330,15 +318,17 @@ class App(tk.Tk):
             activebackground=BORDER, activeforeground=TEXT_HI,
             command=self._open_gt
         ).pack(fill="x", padx=12, pady=2)
-        self._lbl_gt = tk.Label(left, text="Sin GT", bg=BG2,
-                                fg=TEXT_DIM, font=("Helvetica", 8))
+        self._lbl_gt = tk.Label(left, text="Auto (misma imagen)", bg=BG2,
+                                fg=GREEN, font=("Helvetica", 8))
         self._lbl_gt.pack(pady=2)
 
         section_bar(left, "MODELOS")
         self._var_comic = tk.BooleanVar(value=True)
         self._var_real  = tk.BooleanVar(value=True)
+        self._var_art   = tk.BooleanVar(value=True)   # NUEVO
         for var, txt, col in [(self._var_comic, "Cómic FT",    COMIC),
-                               (self._var_real,  "Realista HF", REAL)]:
+                               (self._var_real,  "Realista HF", REAL),
+                               (self._var_art,   "Artístico HF", ART)]:   # NUEVO
             tk.Checkbutton(
                 left, variable=var, text=txt, bg=BG2, fg=col,
                 selectcolor=BG3, activebackground=BG2, activeforeground=col,
@@ -375,30 +365,55 @@ class App(tk.Tk):
         self._lbl_model_info.pack(padx=12, pady=6, anchor="w")
 
         # ── Panel derecho ─────────────────────────────────────────────────────
+        self._right_frame = right
+
+        # CAMBIO: Comic fijo a la izquierda; Notebook Real/Art a la derecha
         results = tk.Frame(right, bg=BG)
         results.pack(fill="both", expand=True, padx=12, pady=10)
+        self._results_frame = results
+        results.columnconfigure(0, weight=1)
+        results.columnconfigure(1, weight=1)
+        results.rowconfigure(0, weight=1)
 
-        for col_i, (label, col, attr) in enumerate([
-            ("Modelo Cómic FT",    COMIC, "_lbl_comic"),
-            ("Modelo Realista HF", REAL,  "_lbl_real"),
-        ]):
-            col_f = tk.Frame(results, bg=BG)
-            col_f.grid(row=0, column=col_i, sticky="nsew", padx=6)
-            results.columnconfigure(col_i, weight=1)
-            results.rowconfigure(0, weight=1)
+        # Columna izquierda: Comic, siempre visible
+        comic_col = tk.Frame(results, bg=BG)
+        comic_col.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
+        tk.Label(comic_col, text="Modelo Cómic FT", bg=BG, fg=COMIC,
+                 font=("Helvetica", 9, "bold"), anchor="w").pack(fill="x", pady=(0, 4))
+        self._frm_comic = tk.Frame(comic_col, bg=BG3)
+        self._frm_comic.pack(fill="both", expand=True)
+        self._ph_comic = placeholder(360, 280, "Modelo Cómic FT")
+        self._lbl_comic = tk.Label(self._frm_comic, image=self._ph_comic, bg=BG3)
+        self._lbl_comic.pack(fill="both", expand=True)
 
-            tk.Label(col_f, text=label, bg=BG, fg=col,
-                     font=("Helvetica", 9, "bold"),
-                     anchor="w").pack(fill="x", pady=(0, 4))
+        # Columna derecha: Notebook con Real y Art
+        right_col = tk.Frame(results, bg=BG)
+        right_col.grid(row=0, column=1, sticky="nsew", padx=(6, 0))
 
-            ph_key = "comic" if col_i == 0 else "real"
-            img_f  = tk.Frame(col_f, bg=BG3)
-            img_f.pack(fill="both", expand=True)
-            lbl = tk.Label(img_f, image=self._ph[ph_key], bg=BG3)
-            lbl.pack(fill="both", expand=True)
-            setattr(self, attr, lbl)
+        side_nb = ttk.Notebook(right_col, style="T.TNotebook")
+        side_nb.pack(fill="both", expand=True)
 
-        # Barra de resumen de métricas al fondo
+        f_real = tk.Frame(side_nb, bg=BG)
+        side_nb.add(f_real, text="  Realista HF  ")
+        tk.Label(f_real, text="Modelo Realista HF", bg=BG, fg=REAL,
+                 font=("Helvetica", 9, "bold"), anchor="w").pack(fill="x", pady=(0, 4))
+        self._frm_real = tk.Frame(f_real, bg=BG3)
+        self._frm_real.pack(fill="both", expand=True)
+        self._ph_real = placeholder(360, 280, "Modelo Realista HF")
+        self._lbl_real = tk.Label(self._frm_real, image=self._ph_real, bg=BG3)
+        self._lbl_real.pack(fill="both", expand=True)
+
+        f_art = tk.Frame(side_nb, bg=BG)
+        side_nb.add(f_art, text="  Artístico HF  ")
+        tk.Label(f_art, text="Modelo Artístico HF", bg=BG, fg=ART,
+                 font=("Helvetica", 9, "bold"), anchor="w").pack(fill="x", pady=(0, 4))
+        self._frm_art = tk.Frame(f_art, bg=BG3)
+        self._frm_art.pack(fill="both", expand=True)
+        self._ph_art = placeholder(360, 280, "Modelo Artístico HF")
+        self._lbl_art = tk.Label(self._frm_art, image=self._ph_art, bg=BG3)
+        self._lbl_art.pack(fill="both", expand=True)
+
+        # Barra de resumen
         mbar = tk.Frame(right, bg=BG2, pady=5)
         mbar.pack(fill="x", padx=12, pady=(0, 6))
         tk.Label(mbar, text="RESUMEN", bg=BG2, fg=TEXT_DIM,
@@ -409,28 +424,27 @@ class App(tk.Tk):
         )
         self._lbl_summary.pack(side="left")
 
-    # ── Tab 2: tabla de métricas ──────────────────────────────────────────────
-
+ # ── Tab 2: tabla de métricas ──────────────────────────────────────────────
+ 
     def _build_metrics_tab(self, parent):
         tk.Label(parent,
                  text="Métricas de la última colorización.\n"
                       "Las métricas marcadas con (GT) requieren ground truth.",
                  bg=BG, fg=TEXT_DIM, font=("Helvetica", 9),
                  justify="left", pady=8).pack(anchor="w", padx=20)
-
+ 
         frame = tk.Frame(parent, bg=BG)
         frame.pack(fill="both", expand=True, padx=20, pady=4)
-
+ 
         HDR_DEFS = [
-            ("Métrica", 22), ("Cómic FT", 14), ("Realista HF", 14), ("↑/↓", 5), ("Descripción", 45)
+            ("Métrica", 20), ("Cómic FT", 12), ("Realista HF", 12), ("Artístico", 12), ("↑/↓", 5), ("Descripción", 38)
         ]
         for c, (h, w) in enumerate(HDR_DEFS):
             tk.Label(frame, text=h, bg=BG3, fg=TEXT_DIM,
                      font=("Helvetica", 8, "bold"), width=w, anchor="w",
                      padx=6, pady=5, relief="flat"
                      ).grid(row=0, column=c, sticky="ew", padx=1, pady=(0, 2))
-
-        # Filas de métricas: (nombre, key, lower_is_better, necesita_GT, descripción)
+ 
         self._METRIC_DEFS = [
             ("Colorfulness (CF) ↑",  "colorfulness", False, False,
              "Riqueza cromática (Hasler & Süsstrunk). Usada en el paper DDColor."),
@@ -447,16 +461,17 @@ class App(tk.Tk):
             ("Color Consistency ↓",  "consistency",  True,  False,
              "Varianza SLIC intra-región. Menor = más plano = más estilo cómic."),
         ]
-
+ 
         self._metric_labels = []
         for r, (name, key, lower, needs_gt, desc) in enumerate(self._METRIC_DEFS):
             row_lbls = []
             for c, (txt, w, fg) in enumerate([
-                (name, 22, TEXT),
-                ("—",  14, TEXT_DIM),
-                ("—",  14, TEXT_DIM),
+                (name, 20, TEXT),
+                ("—",  12, TEXT_DIM),
+                ("—",  12, TEXT_DIM),
+                ("—",  12, TEXT_DIM),
                 ("",    5, TEXT_DIM),
-                (desc, 45, TEXT_DIM),
+                (desc, 38, TEXT_DIM),
             ]):
                 l = tk.Label(frame, text=txt, bg=BG2, fg=fg,
                              font=("Helvetica", 9), width=w, anchor="w",
@@ -464,10 +479,10 @@ class App(tk.Tk):
                 l.grid(row=r+1, column=c, sticky="ew", padx=1, pady=1)
                 row_lbls.append(l)
             self._metric_labels.append(row_lbls)
-
-        for c in range(5):
-            frame.columnconfigure(c, weight=1 if c == 4 else 0)
-
+ 
+        for c in range(6):
+            frame.columnconfigure(c, weight=1 if c == 5 else 0)
+ 
         leg = tk.Frame(parent, bg=BG)
         leg.pack(anchor="w", padx=20, pady=10)
         for txt, col in [("✓ mejor resultado", GREEN), ("(GT) necesita ground truth", TEXT_DIM)]:
@@ -491,18 +506,47 @@ class App(tk.Tk):
                           background=BG3)
         txt.tag_configure("dim",  foreground=TEXT_DIM)
         txt.tag_configure("ok",   foreground=GREEN)
+        txt.tag_configure("amber", foreground=AMBER)
 
         def w(t, *tags): txt.insert("end", t, tags)
 
         w("DDColor Lab — Guía de uso\n\n", "h1")
+
+        w("Descargar los pesos del proyecto (PID · US)\n", "h2")
+        w("""\
+  Los pesos fine-tuned sobre el dataset de cómics están disponibles en HuggingFace:
+\n""", "dim")
+        w("""\
+  # Opción A — huggingface_hub (recomendado):
+  from huggingface_hub import hf_hub_download
+
+  hf_hub_download(
+      repo_id="Aleparqui/PID_proyect",
+      filename="net_g_latest.pth",
+      local_dir="./models/"
+  )
+  # Renombra a: models/ddcolor_comic.pth
+\n""", "code")
+        w("""\
+  # Opción B — hf CLI:
+  hf download Aleparqui/PID_proyect net_g_latest.pth --local-dir ./models/
+  # Renombra a: models/ddcolor_comic.pth
+\n""", "code")
+        w("""\
+  # Opción C — descarga directa desde el navegador:
+  https://huggingface.co/Aleparqui/PID_proyect/resolve/main/net_g_latest.pth
+  # Guarda el archivo como: models/ddcolor_comic.pth
+\n""", "code")
+        w("  ⚠  El archivo pesa varios cientos de MB. Asegúrate de tener espacio suficiente.\n\n", "amber")
 
         w("Estructura de archivos\n", "h2")
         w("""\
   tu_proyecto/
   ├── ddcolor_desktop.py
   ├── models/
-  │   ├── ddcolor_comic.pth          ← tu fine-tune (BasicSR checkpoint)
-  │   └── ddcolor_realistic.pth      ← modelo oficial (ModelScope / HF)
+  │   ├── ddcolor_comic.pth          ← nuestro fine-tune (BasicSR checkpoint)
+  │   ├── ddcolor_realistic.pth      ← modelo oficial (ModelScope / HF)
+  │   └── ddcolor_artistic.pth       ← modelo artístico (ModelScope / HF)
   └── ddcolor/                       ← paquete instalado con setup.py develop
 \n""", "code")
 
@@ -524,20 +568,28 @@ class App(tk.Tk):
   para controlar esto, p.ej.: ddcolor_comic_tiny.pth
 \n""", "dim")
 
-        w("Descargar el modelo realista\n", "h2")
+        w("Descargar los modelos oficiales\n", "h2")
         w("""\
-  # Opción A — HuggingFace:
-  from huggingface_hub import hf_hub_download
-  hf_hub_download(
-      repo_id="piddnad/DDColor-models",
-      filename="ddcolor_modelscope.pth",
-      local_dir="./models/"
-  )
+  # Realista:
+  hf_hub_download(repo_id="piddnad/DDColor-models",
+                  filename="ddcolor_modelscope.pth",
+                  local_dir="./models/")
   # Renombra a: models/ddcolor_realistic.pth
 
-  # Opción B — con el script del proyecto:
-  python scripts/infer.py --model_name ddcolor_modelscope ...
+  # Artístico:
+  hf_hub_download(repo_id="piddnad/DDColor-models",
+                  filename="ddcolor_artistic.pth",
+                  local_dir="./models/")
+  # Renombra a: models/ddcolor_artistic.pth
 \n""", "code")
+
+        w("Ground Truth\n", "h2")
+        w("""\
+  Al abrir una imagen, ésta se usa automáticamente como ground truth para
+  las métricas que lo requieren (PSNR, SSIM, Chrominance MAE, Luminance MAE).
+  Puedes sobreescribir el GT con el botón "Abrir GT (opcional)" si tienes
+  una imagen de referencia diferente.
+\n""", "dim")
 
         w("Métricas\n", "h2")
         rows = [
@@ -583,8 +635,11 @@ class App(tk.Tk):
         if self._input_bgr is None:
             messagebox.showerror("Error", f"No se pudo leer: {path}")
             return
+        self._gt_bgr = self._input_bgr
+        self._lbl_gt.configure(text="Auto (misma imagen)", fg=GREEN)
+
         ph = bgr_to_photoimage(self._input_bgr, THUMB_W, THUMB_H)
-        self._ph["input"] = ph
+        self._ph_input = ph
         self._lbl_input.configure(image=ph)
         self._lbl_input.image = ph
         self._var_status.set(f"Imagen: {Path(path).name}")
@@ -612,14 +667,19 @@ class App(tk.Tk):
         threading.Thread(target=self._worker, daemon=True).start()
 
     def _worker(self):
-        # Pasar la imagen original al pipeline: extrae el canal L internamente,
-        # igual que hace infer.py. La versión gris solo se usa para el modo demo.
         img  = self._input_bgr
         gray = cv2.cvtColor(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR)
 
         results = {}
-        for style in ["comic", "realistic"]:
-            enabled = self._var_comic.get() if style == "comic" else self._var_real.get()
+        # CAMBIO: añadido "artistic"
+        for style in ["comic", "realistic", "artistic"]:
+            if style == "comic":
+                enabled = self._var_comic.get()
+            elif style == "realistic":
+                enabled = self._var_real.get()
+            else:
+                enabled = self._var_art.get()
+
             if not enabled:
                 results[style] = None
                 continue
@@ -628,18 +688,28 @@ class App(tk.Tk):
                 results[style] = self._demo_colorize(gray, style)
             else:
                 try:
-                    results[style] = pipe.process(img)
+                    out = pipe.process(img)
+
+                    # SOLO corregir si claramente está en rango [-1,1]
+                    if out.dtype != np.uint8:
+                        if out.min() >= -1.1 and out.max() <= 1.1:
+                            out = ((out + 1) * 127.5).clip(0, 255).astype(np.uint8)
+
+                    # NO tocar si ya es uint8
+
+                    results[style] = out
+                    
                 except Exception as e:
                     print(f"[ERROR] {style}: {e}")
                     results[style] = self._demo_colorize(gray, style)
 
-        m_c = compute_metrics(results["comic"],    self._gt_bgr) if results.get("comic")    is not None else {}
+        m_c = compute_metrics(results["comic"],     self._gt_bgr) if results.get("comic")     is not None else {}
         m_r = compute_metrics(results["realistic"], self._gt_bgr) if results.get("realistic") is not None else {}
+        m_a = compute_metrics(results["artistic"],  self._gt_bgr) if results.get("artistic")  is not None else {}  # NUEVO
 
         self.after(0, lambda: self._update(results, m_c, m_r))
 
     def _demo_colorize(self, gray_bgr: np.ndarray, style: str) -> np.ndarray:
-        """Colorización simulada cuando no hay pesos."""
         if not SKIMAGE_OK:
             return gray_bgr
         lab = cv2.cvtColor(gray_bgr, cv2.COLOR_BGR2Lab).astype(np.float32)
@@ -647,6 +717,9 @@ class App(tk.Tk):
         if style == "comic":
             A = np.round((np.sin(L/25.0)*55 + np.cos(L/40.0)*20) / 15) * 15
             B = np.round((np.cos(L/30.0)*60 - np.sin(L/20.0)*25) / 15) * 15
+        elif style == "artistic":
+            A = np.sin(L/20.0)*45 + np.cos(L/35.0)*30
+            B = np.cos(L/25.0)*50 - np.sin(L/15.0)*20
         else:
             A = np.sin(L/35.0)*25 + np.cos(L/55.0)*10
             B = np.cos(L/45.0)*30 - np.sin(L/30.0)*12
@@ -660,6 +733,9 @@ class App(tk.Tk):
 
         self._comic_bgr = results.get("comic")
         self._real_bgr  = results.get("realistic")
+        self._art_bgr   = results.get("artistic")
+
+        m_a = compute_metrics(self._art_bgr, self._gt_bgr) if self._art_bgr is not None else {}
 
         def show_result(bgr, lbl_widget, ph_key, placeholder_text):
             if bgr is not None:
@@ -670,45 +746,70 @@ class App(tk.Tk):
             lbl_widget.configure(image=ph)
             lbl_widget.image = ph
 
-        show_result(self._comic_bgr, self._lbl_comic, "comic", "Desactivado")
-        show_result(self._real_bgr,  self._lbl_real,  "real",  "Desactivado")
+        show_result(self._comic_bgr, self._lbl_comic, "_ph_comic", "Desactivado")
+        show_result(self._real_bgr,  self._lbl_real,  "_ph_real",  "Desactivado")
+        show_result(self._art_bgr,   self._lbl_art,   "_ph_art",   "Desactivado")
 
-        # ── Actualizar tabla de métricas ──────────────────────────────────────
         summary_parts = []
+
         for row_lbls, (name, key, lower, needs_gt, _) in zip(
             self._metric_labels, self._METRIC_DEFS
         ):
             vc = m_c.get(key)
             vr = m_r.get(key)
+            va = m_a.get(key)
 
             def fmt(v):
                 if v is None: return "—"
                 return f"{v:.4f}" if abs(v) < 10 else f"{v:.2f}"
 
-            if vc is not None and vr is not None:
-                a_wins = (vc < vr) if lower else (vc > vr)
+            values = {
+                "comic": vc,
+                "real": vr,
+                "art": va
+            }
+
+            valid_vals = {k: v for k, v in values.items() if v is not None}
+
+            if len(valid_vals) >= 2:
+                best_key = min(valid_vals, key=valid_vals.get) if lower else max(valid_vals, key=valid_vals.get)
+
+                # Cómic
                 row_lbls[1].configure(
-                    text=f"✓ {fmt(vc)}" if a_wins else fmt(vc),
-                    fg=GREEN if a_wins else TEXT
+                    text=f"✓ {fmt(vc)}" if best_key == "comic" else fmt(vc),
+                    fg=GREEN if best_key == "comic" else TEXT
                 )
+
+                # Realista
                 row_lbls[2].configure(
-                    text=f"✓ {fmt(vr)}" if not a_wins else fmt(vr),
-                    fg=GREEN if not a_wins else TEXT
+                    text=f"✓ {fmt(vr)}" if best_key == "real" else fmt(vr),
+                    fg=GREEN if best_key == "real" else TEXT
                 )
-                row_lbls[3].configure(text="↑" if not lower else "↓")
-                winner = "Cómic" if a_wins else "Real"
-                summary_parts.append(f"{key.split('_')[0]}→{winner}")
+
+                # Artístico
+                row_lbls[3].configure(
+                    text=f"✓ {fmt(va)}" if best_key == "art" else fmt(va),
+                    fg=GREEN if best_key == "art" else TEXT
+                )
+
+                # Flecha (columna correcta)
+                row_lbls[4].configure(text="↓" if lower else "↑")
+
+                summary_parts.append(f"{key.split('_')[0]}→{best_key}")
+
             else:
-                row_lbls[1].configure(text=fmt(vc), fg=TEXT_DIM if vc is None else TEXT)
-                row_lbls[2].configure(text=fmt(vr), fg=TEXT_DIM if vr is None else TEXT)
+                for i in [1, 2, 3, 4]:
+                    row_lbls[i].configure(text="—", fg=TEXT_DIM)
 
         mode = "DEMO" if self._pipes["comic"] is None else "REAL"
         gt_s = " · GT ✓" if self._gt_bgr is not None else ""
         self._var_status.set(f"[{mode}]{gt_s} · Completado")
+
         self._lbl_summary.configure(
             text="  ·  ".join(summary_parts) if summary_parts else "Sin resultados",
             fg=TEXT
         )
+
         self._btn_save.configure(state="normal")
 
     def _save(self):
@@ -716,8 +817,10 @@ class App(tk.Tk):
         if not folder:
             return
         saved = []
-        for bgr, name in [(self._comic_bgr,  "result_comic_ft.png"),
-                          (self._real_bgr,   "result_realistic_hf.png")]:
+        # CAMBIO: guardar también artístico
+        for bgr, name in [(self._comic_bgr, "result_comic_ft.png"),
+                          (self._real_bgr,  "result_realistic_hf.png"),
+                          (self._art_bgr,   "result_artistic_hf.png")]:
             if bgr is not None:
                 cv2.imwrite(str(Path(folder)/name), bgr)
                 saved.append(name)
@@ -740,7 +843,8 @@ class App(tk.Tk):
             MODELS_DIR.mkdir(exist_ok=True)
             info_lines = []
             for style, fname in [("comic",    "ddcolor_comic.pth"),
-                                  ("realistic","ddcolor_realistic.pth")]:
+                                  ("realistic","ddcolor_realistic.pth"),
+                                  ("artistic", "ddcolor_artistic.pth")]:
                 p = MODELS_DIR / fname
                 pipe = try_load_pipeline(p)
                 self._pipes[style] = pipe
