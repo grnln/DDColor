@@ -1,0 +1,200 @@
+\documentclass[a4paper]{article}
+
+%% Language and font encodings
+\usepackage[spanish]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+
+%% Sets page size and margins
+\usepackage[a4paper,top=3cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=2cm]{geometry}
+
+%% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[colorinlistoftodos]{todonotes}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+
+
+\title{Extendiendo DDColor: Análisis e 
+investigación de las limitaciones del modelo.}
+\author{José Carlos Mora López, Alejandro Parody Quirós, Guillermo Rodríguez Narbona}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+ \noindent El resumen debe tener como máximo 250 palabras y ser un único párrafo. El resumen debe describir lo más fielmente posible el trabajo realizado (no el propuesto inicialmente, que podría ser distinto). 
+ En esta plantilla se presentan las indicaciones para realizar el trabajo de PID, al mismo tiempo que la estructura que debe tener la documentación a presentar. 
+
+\hspace{1cm}
+
+\noindent \textbf{Palabras clave:} 
+%(hasta cinco palabras que clasifiquen el trabajo) 
+PID, colorización, imagen digital, red neuronal, limitaciones.
+\end{abstract}
+
+
+\section{Introducción}
+
+En este trabajo, se realizó un análisis y extensión del proyecto DDColor \cite{DDColor}, el cual implementa un proceso de colorización de imágenes mediante una red neuronal.
+
+Principalmente, este trabajo se centra en dos aspectos:
+
+\begin{itemize}
+  \item{Extensión de la red neuronal DDColor para su uso en imágenes no fotorrealistas mediante reentrenamiento.}
+  \item{Estudio de las carencias del modelo a la hora de aplicar color a objetos translúcidos.}
+\end{itemize}
+
+Para ello, fue necesario realizar un análisis en profundidad de la arquitectura del sistema, así como de los mecanismos empleados.
+
+\section{Planteamiento teórico}
+
+El problema que busca resolver DDColor es el de la colorización de imágenes en escala de grises, el cual ha visto múltiples soluciones tanto manuales como en forma de algoritmos de procesamiento de imágenes digitales.
+
+El novedoso método del proyecto DDColor consiste en una red neuronal que emplea una arquitectura \textit{encoder-decoder} \cite{IBMEncoderDecoder}. Dicha red realiza los siguientes procesos:
+
+\begin{enumerate}
+  \item{Extracción de información semántica de los contenidos de la imagen.}
+  \item{Construcción de un mapa de características de la imagen.}
+  \item{Construcción de una serie de \textit{colour queries} indicando cómo colorizar la imagen.}
+  \item{Combinación de los resultados de los procesos anteriormente mencionados para aplicar color a la imagen.}
+\end{enumerate}
+
+A continuación, se detallarán ambas partes de la arquitectura \textit{encoder-decoder}.
+
+\subsection{Encoder}
+
+La función del \textit{encoder} es convertir los datos de entrada a una representación vectorial. En el caso de la red DDColor, consiste en un modelo preentrenado, en este caso especializado en la clasificación de imágenes, encargado de la extracción de características semánticas de la imagen fuente.
+
+El modelo empleado en el proyecto DDColor es ConvNext \cite{ConvNext}, una red convolucional capaz de extraer una serie de mapas de características a distintas resoluciones (fracciones de la resolución original) que conforman una representación jerárquica de los contenidos de la imagen.
+
+Dicha red se diferencia del resto al incorporar una arquitectura basada en convolución, pero inspirada por los \textit{Vision Transformers}. La estructura de la misma sería la siguiente:
+
+\begin{enumerate}
+  \item{\textit{Patchify}: Capa introducida en los \textit{Vision Transformers}, implementada como una convolución con un kernel de 4x4.}
+\end{enumerate}
+
+\subsection{Decoder}
+
+El propósito del \textit{decoder} es convertir la salida vectorial del \textit{encoder} a una representación del mismo tipo que la inicial (en el caso de \textit{DDColor}, una imagen).
+
+La arquitectura de DDColor comprende dos \textit{decoders} que trabajan simultáneamente (llamados \textit{pixel decoder} y \textit{colour decoder}).
+
+\subsubsection{Pixel decoder}
+
+Este decodificador emplea capas \textit{PixelShuffle} \cite{PixelShuffle} para reescalar los mapas de características producidos por el \textit{encoder} de vuelta a la resolución de la imagen fuente.
+
+Cada capa \textit{PixelShuffle} contiene una secuencia de \textit{L} capas convolucionales, con la siguiente forma:
+
+\begin{enumerate}
+  \item{\textit{L-1} operaciones de convolución entre un kernel (matriz de pesos que se ajustan en el proceso de aprendizaje) y el resultado de la anterior capa (o la imagen fuente, en el caso de la primera capa).}
+  \item{\textit{Operación de convolución con shuffle}: Tras la convolución, se aplica un operador que que reordena los elementos de la imagen, alterando sus dimensiones.}
+\end{enumerate}
+
+\subsubsection{Colour decoder}
+
+Este decodificador emplea una arquitectura basada en la arquitectura de un transformer, es decir, empleando mecanismos de atención, para refinar \textit{colour queries}.
+
+Dichas \textit{colour queries} son embeddings que indican el color de las distintas características de la imagen.
+
+Para ello, se crean una serie de CDBs (\textit{Colour Decoder Blocks}), uno para cada mapa de características generado en el \textit{encoder}, los cuales procesan las \textit{colour queries} secuencialmente.
+
+Cada CDB produce una salida (una \textit{colour query} refinada) en base a dos entradas:
+
+\begin{itemize}
+  \item{Mapa de características generado por el encoder.}
+  \item{\textit{Colour query} a refinar.}
+\end{itemize}
+
+La \textit{colour query} inicial (la empleada como entrada del primer CDB de la secuencia) está inicializada al embedding nulo. El resto de CDBs emplean la \textit{colour query} refinada por el anterior CDB.
+
+Antes de proceder con las operaciones realizadas dentro de cada CDB, se explicarán brevemente los mecanismos de atención empleados.
+
+\paragraph{Los mecanismos de atención} tienen tres características principales \cite{IBMAttention}:
+
+\begin{enumerate}
+  \item{Leen \textbf{secuencias de datos} y las transforman en \textit{embeddings} vectoriales.}
+  \item{Asignan \textbf{pesos de atención} a los distintos elementos de la secuencia, determinando así su importancia.}
+  \item{Implementan algún proceso para \textbf{influir en las predicciones del modelo} mediante los pesos de atención.}
+\end{enumerate}
+
+En los mecanismos de atención, para cada elemento de la secuencia, se distinguen tres conceptos fundamentales:
+
+\begin{itemize}
+  \item{\textbf{Query}: Vector que representa la información buscada por el elemento.}
+  \item{\textbf{Key}: Vector que representa la información contenida por el elemento.}
+  \item{\textbf{Value}: Vector que contiene la información del elemento, ponderada empleando los pesos de atención.}
+\end{itemize}
+
+En el contexto de DDColor, se emplean dos tipos de atención:
+
+\begin{itemize}
+  \item{\textbf{Atención cruzada}: Las \textit{queries} y las \textit{keys} provienen de fuentes distintas.}
+  \item{\textbf{Autoatención}: Las \textit{queries} y las \textit{keys} proceden de la misma fuente.}
+\end{itemize}
+
+Las operaciones realizadas en cada CDB son las siguientes:
+
+\begin{enumerate}
+  \item{\textbf{Capa de atención cruzada} empleando el mapa de características como \textit{key} y \textit{value} y con la colour query como \textit{query}.}
+  \item{\textbf{Capa de autoatención} empleando el resultado de la anterior como \textit{query}, \textit{key} y \textit{value}.}
+  \item{\textbf{Red feed-forward} empleando el resultado de la anterior como entrada. Se trata de una red neuronal convencional, empleando dos capas lineales con una capa de \textit{drop-out} entre las mismas (la cual cambia a cero valores en base a una determinada probabilidad), así como una capa de normalización y una activación ReLU.}
+\end{enumerate}
+
+Entre cada par de capas, se aplica una capa de normalización. Además, en cada capa de normalización se suma el resultado de la anterior capa de normalización (funcionando así además como capas residuales).
+
+\section{Implementación}
+
+Esta sección de la documentación  debe incluir la descripción de la implementación (pero no el código), especificando las tecnologías usadas, el diseño, módulos o partes principales. \textbf{Debe quedar muy claro cuál es la parte original implementada, qué repositorio se ha adaptado o bifurcado, qué librerías se han usado,  todo con referencias apropiadas}. Se debe describir (tanto en la aplicación, como en la documentación, como en la presentación) los pasos seguidos para resolver el problema que se plantea de la forma más divulgativa posible. 
+
+%Se recomienda el uso de Python con la librería \textbf{OpenCV}, \url{https://opencv.org/}.
+%Matlab posee también un toolbox de procesamiento de imágenes que se puede usar en los laboratorios de la escuela.
+Una opción muy práctica y recomendable es la de usar la librería \textbf{OpenCV} con Python mediante el gestor de paquetes de Anaconda \url{https://www.anaconda.com} y usar los notebook de Jupyter en los que se puede intercalar ejecución de código con explicaciones teóricas. % Éstas sólo son algunas indicaciones. 
+
+Siempre se debe redactar un fichero {\bf Leeme explicando todo lo necesario para poder ejecutar y usar la implementación} en cualquier ordenador (o al menos con el mismo sistema operativo).
+
+
+
+\section{Experimentación}
+
+Una sección de ejemplos comentados y pruebas realizadas con la implementación desarrollada es {\textit imprescindible} en este trabajo. Si existen distintos parámetros que intervienen en el método, se deben comprender y experimentar con ellos. También puede ser de interés probar distintos tipos de imágenes dentro del contexto del trabajo. Igualmente importantes (o más) serán las conclusiones que se puedan obtener de la experimentación realizada. 
+
+
+\section{Manual de usuario}
+
+Se debe incluir un breve manual de usuario en caso de que se desarrolle una aplicación propia. Si se implementa un notebook de Jupyter, no es necesario un manual de usuario, sino que debe quedar muy guiado, explicando todos los pasos y parámetros.  
+
+\section{Conclusiones}
+
+Se debe introducir una sección de conclusiones que incluyan propuestas claras de mejora o extensión del trabajo (por ejemplo, si no se han podido alcanzar todos los objetivos iniciales). También conclusiones sobre los resultados obtenidos, en qué medida difieren de los esperados. Además, son apropiadas conclusiones sobre las desviaciones en cuanto a la planificación inicial de tiempos, así como conclusiones sobre la experiencia de la realización del trabajo (lecciones aprendidas).
+
+\section{Autoevaluación}
+
+Siguiendo la rúbrica dada, se debe detallar, por parte de  \textbf{cada miembro del grupo}, la puntuación para el trabajo que se considera justa en cada apartado. 
+
+\section{Tabla de tiempos}
+
+
+Se debe justificar el trabajo realizado por cada componente del grupo, indicando el {\bf tiempo total que cada miembro del grupo ha dedicado} al trabajo (lo que puede implicar diferencia de notas obtenidas por los distintos miembros del grupo). El trabajo realizado debe ser de {\bf 50 horas por estudiante}. Además, debe haber un plan de trabajo \textbf{individual} detallado con las {\bf tareas específicas realizadas por cada miembro} del grupo. Ejemplos de tareas son: implementación de la función "tal" del código; búsqueda de información y redacción del concepto "tal"; Generación de tabla ilustrativa para el proceso "tal". No son tareas: escribir la documentación; desarrollar código; hacer la presentación. Se puede usar la tabla siguiente o bien documentos generados por la herramienta de gestión de proyectos que se prefiera.
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|}
+\hline
+ Fecha de la
+ actividad 
+& Tiempo (h)
+& Miembro
+& Actividad realizada
+\\\hline
+\mbox{ }&\mbox{}&\mbox{ }&\mbox{}\\
+\mbox{ }&\mbox{}&\mbox{ }&\mbox{}\\\hline
+\end{tabular}
+\end{center}
+
+
+\bibliography{main}{}
+\bibliographystyle{plain}
+-\newpage 
+
+\end{document}
