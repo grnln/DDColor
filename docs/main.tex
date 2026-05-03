@@ -155,6 +155,17 @@ En los mecanismos de atención, para cada elemento de la secuencia, se distingue
   \item{\textbf{Value}: Vector que contiene la información del elemento, ponderada empleando los pesos de atención.}
 \end{itemize}
 
+La fórmula general de un mecanismo de atención es la siguiente \cite{Attention}:
+
+\centerline{$Attention(Q, K, V) = softmax(\frac{QK^T}{\sqrt{d_k}})V$}
+
+Donde:
+
+\begin{itemize}
+  \item{$d_k$ es la dimensión de las \textit{queries} y \textit{keys}.}
+  \item{$softmax$ se refiere a la función de activación del mismo nombre, definida en \cite{Softmax}.}
+\end{itemize}
+
 En el contexto de DDColor, se emplean dos tipos de atención:
 
 \begin{itemize}
@@ -167,7 +178,7 @@ Las operaciones realizadas en cada CDB son las siguientes:
 \begin{enumerate}
   \item{\textbf{Capa de atención cruzada} empleando el mapa de características como \textit{key} y \textit{value} y con la colour query como \textit{query}.}
   \item{\textbf{Capa de autoatención} empleando el resultado de la anterior como \textit{query}, \textit{key} y \textit{value}.}
-  \item{\textbf{Red feed-forward} empleando el resultado de la anterior como entrada. Se trata de una red neuronal convencional, empleando dos capas lineales con una capa de \textit{drop-out} entre las mismas (la cual cambia a cero valores en base a una determinada probabilidad), así como una capa de normalización y una activación ReLU.}
+  \item{\textbf{Red feed-forward} empleando el resultado de la anterior como entrada. Se trata de una red neuronal convencional, empleando dos capas lineales con una capa de \textit{drop-out} entre las mismas (la cual cambia aleatoriamente a cero determinados valores en base a una probabilidad), así como una capa de normalización y una activación ReLU.}
 \end{enumerate}
 
 Entre cada par de capas, se aplica una capa de normalización. Además, en cada capa de normalización se suma el resultado de la anterior capa de normalización (funcionando así además como capas residuales).
@@ -184,15 +195,51 @@ Tras el \textit{encoder} y el \textit{decoder}, la red DDColor contiene el denom
 
 \section{Implementación}
 
-Esta sección de la documentación  debe incluir la descripción de la implementación (pero no el código), especificando las tecnologías usadas, el diseño, módulos o partes principales. \textbf{Debe quedar muy claro cuál es la parte original implementada, qué repositorio se ha adaptado o bifurcado, qué librerías se han usado,  todo con referencias apropiadas}. Se debe describir (tanto en la aplicación, como en la documentación, como en la presentación) los pasos seguidos para resolver el problema que se plantea de la forma más divulgativa posible. 
+Para este proyecto, se realizó un \textit{fork} del repositorio de GitHub en el que reside la implementación de la red DDColor:
 
-%Se recomienda el uso de Python con la librería \textbf{OpenCV}, \url{https://opencv.org/}.
-%Matlab posee también un toolbox de procesamiento de imágenes que se puede usar en los laboratorios de la escuela.
-Una opción muy práctica y recomendable es la de usar la librería \textbf{OpenCV} con Python mediante el gestor de paquetes de Anaconda \url{https://www.anaconda.com} y usar los notebook de Jupyter en los que se puede intercalar ejecución de código con explicaciones teóricas. % Éstas sólo son algunas indicaciones. 
+\begin{itemize}
+  \item{Repositorio original: \url{https://github.com/piddnad/DDColor}.}
+  \item{\textit{Fork} realizado para el proyecto: \url{https://github.com/grnln/DDColor}.}
+\end{itemize}
 
-Siempre se debe redactar un fichero {\bf Leeme explicando todo lo necesario para poder ejecutar y usar la implementación} en cualquier ordenador (o al menos con el mismo sistema operativo).
+La red en cuestión fue implementada en \href{https://www.python.org/}{Python}, empleando principalmente las librerías \href{https://pytorch.org/}{PyTorch} (\textit{framework} para la implementación de redes neuronales) y \href{https://numpy.org/}{NumPy} (librería especializada en la implementación de operaciones matemáticas de forma vectorial).
 
+Asimismo, se emplean otras librerías en el proyecto:
 
+\begin{itemize}
+  \item{\href{https://opencv.org/}{OpenCV}: Implementa múltiples operaciones de visión por ordenador.}
+  \item{\href{https://pillow.readthedocs.io/en/stable/}{Pillow}: Implementa operaciones de lectura y procesamiento de imágenes.}
+  \item{\href{https://tqdm.github.io/}{tqdm}: Implementa barras de progreso para aplicaciones de línea de comandos de forma sencilla.}
+  \item{\href{https://huggingface.co/}{HuggingFace}: Librería implementada por la comunidad de inteligencia artificial homónima para cargar modelos almacenados en su servicio web.}
+\end{itemize}
+
+Por último, el proceso de entrenamiento de la red también requiere las siguientes dependencias:
+
+\begin{itemize}
+  \item{\href{https://pyyaml.org/}{PyYAML}: Implementa operaciones de gestión de ficheros en formato YAML en Python.}
+  \item{\href{https://scikit-image.org/}{Scikit-image}: Implementa operaciones de procesamiento de imágenes.}
+  \item{\href{https://scipy.org/}{SciPy}: Implementa algoritmos para computación científica.}
+  \item{\href{https://www.tensorflow.org/tensorboard}{TensorBoard}: Implementa herramientas de visualización para la experimentación de machine learning (parte del proyecto TensorFlow).}
+  \item{\href{https://wandb.ai/site/}{Weights \& Biases}: Implementa un \textit{framework} para gestionar modelos de inteligencia artificial.}
+\end{itemize}
+
+El código está principalmente contenido en tres directorios del repositorio:
+
+\begin{itemize}
+  \item{El directorio \texttt{ddcolor} contiene la implementación de la propia red DDColor.}
+  \item{El directorio \texttt{basicsr} contiene \href{https://github.com/xpixelgroup/basicsr}{BasicSR}, un conjunto de herramientas para la restauración de imagen y vídeo que es empleado por DDColor como \textit{framework} de entrenamiento.}
+  \item{El directorio \texttt{scripts} contiene una serie de pequeños scripts, empleados para realizar varias tareas.}
+\end{itemize}
+
+Adicionalmente, el directorio raíz del repositorio contiene un archivo \texttt{setup.py}, empleado para realizar la configuración inicial del proyecto.
+
+\subsection{DDColor}
+
+\subsection{BasicSR}
+
+\subsection{Scripts}
+
+\subsection{Contribución propia}
 
 \section{Experimentación}
 
