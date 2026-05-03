@@ -14,8 +14,6 @@
 \usepackage[colorinlistoftodos]{todonotes}
 \usepackage[colorlinks=true, allcolors=blue]{hyperref}
 
-
-
 \title{Extendiendo DDColor: Análisis e 
 investigación de las limitaciones del modelo.}
 \author{José Carlos Mora López, Alejandro Parody Quirós, Guillermo Rodríguez Narbona}
@@ -52,13 +50,21 @@ Para ello, fue necesario realizar un análisis en profundidad de la arquitectura
 
 El problema que busca resolver DDColor es el de la colorización de imágenes en escala de grises, el cual ha visto múltiples soluciones tanto manuales como en forma de algoritmos de procesamiento de imágenes digitales.
 
-El novedoso método del proyecto DDColor consiste en una red neuronal que emplea una arquitectura \textit{encoder-decoder} \cite{IBMEncoderDecoder}. Dicha red realiza los siguientes procesos:
+El novedoso método del proyecto DDColor consiste en una red neuronal que emplea una arquitectura \textit{encoder-decoder} \cite{IBMEncoderDecoder}.
+
+Para la colorización, esta red emplea el modelo de color \textit{CIELAB}. De esta manera:
+\begin{itemize}
+  \item{La imagen original (en escala de grises) es tratada como el canal \textit{L} en dicho modelo de color (correspondiente a la luminancia).}
+  \item{La función de la red es hallar los canales \textit{A} y \textit{B} (correspondientes a la crominancia).}
+\end{itemize}
+
+La red DDColor realiza los siguientes procesos:
 
 \begin{enumerate}
-  \item{Extracción de información semántica de los contenidos de la imagen.}
-  \item{Construcción de un mapa de características de la imagen.}
-  \item{Construcción de una serie de \textit{colour queries} indicando cómo colorizar la imagen.}
-  \item{Combinación de los resultados de los procesos anteriormente mencionados para aplicar color a la imagen.}
+  \item{Extracción de información semántica de los contenidos de la imagen (\textbf{encoder}).}
+  \item{Construcción de un mapa de características de la imagen (\textbf{pixel decoder}).}
+  \item{Construcción de una serie de \textit{colour queries} indicando cómo colorizar la imagen (\textbf{colour decoder}).}
+  \item{Combinación de los resultados de los procesos anteriormente mencionados para aplicar color a la imagen (\textbf{fusion module}).}
 \end{enumerate}
 
 A continuación, se detallarán ambas partes de la arquitectura \textit{encoder-decoder}.
@@ -67,13 +73,35 @@ A continuación, se detallarán ambas partes de la arquitectura \textit{encoder-
 
 La función del \textit{encoder} es convertir los datos de entrada a una representación vectorial. En el caso de la red DDColor, consiste en un modelo preentrenado, en este caso especializado en la clasificación de imágenes, encargado de la extracción de características semánticas de la imagen fuente.
 
-El modelo empleado en el proyecto DDColor es ConvNext \cite{ConvNext}, una red convolucional capaz de extraer una serie de mapas de características a distintas resoluciones (fracciones de la resolución original) que conforman una representación jerárquica de los contenidos de la imagen.
+\subsubsection{ConvNeXT}
 
-Dicha red se diferencia del resto al incorporar una arquitectura basada en convolución, pero inspirada por los \textit{Vision Transformers}. La estructura de la misma sería la siguiente:
+El \textit{encoder} del proyecto DDColor es el modelo ConvNeXT \cite{ConvNeXT}, una red convolucional capaz de extraer una serie de mapas de características a distintas resoluciones (fracciones de la resolución original) que conforman una representación jerárquica de los contenidos de la imagen.
+
+Dicho modelo surge como alternativa a los Vision Transformers (ViT) \cite{ViT}, introducidos como una aplicación de las arquitecturas basadas en \textit{transformers} (empleadas habitualmente en tareas de procesamiento de lenguaje natural) a la clasificación de imágenes, aplicación en la que tradicionalmente se habían empleado redes convolucionales.
+
+Así, ConvNeXT introduce ideas originalmente presentadas en los Vision Transformers en una red puramente convolucional, combinando la mayor precisión ofrecida por éstos con la mayor eficiencia y sencillez de una red convolucional tradicional.
+
+La arquitectura de ConvNeXT es la siguiente:
 
 \begin{enumerate}
-  \item{\textit{Patchify}: Capa introducida en los \textit{Vision Transformers}, implementada como una convolución con un kernel de 4x4.}
+  \item{Capa de convolución con un kernel de tamaño 4x4 (\textit{patchify}).}
+  \item{Varios bloques con la misma estructura:}
+  \begin{enumerate}
+    \item{Capa de convolución \textit{depthwise} (se aplica la misma convolución a cada canal de la imagen por separado) con kernel de tamaño 7x7.}
+    \item{Capa de normalización \textit{LayerNorm}.}
+    \item{Capa de convolución con kernel de tamaño 1x1.}
+    \item{Función de activación GELU (\textit{Gaussian Error Linear Unit}, similar a ReLU).}
+    \item{Capa de convolución con kernel de tamaño 1x1.}
+  \end{enumerate}
 \end{enumerate}
+
+De todo este proceso, es importante la inclusión de una capa de \textit{patchify}, la cual es una de las ideas introducidas en los Vision Transformers.
+
+Esta capa se sitúa al inicio de la red, en lo que se denomina la \textit{stem cell} (encargada de procesar las imágenes al inicio para después ser tratadas por el resto de la red).
+
+Su función es transformar la imagen en una serie de \textit{patches} (en el caso de esta red, mediante una convolución de 4x4). De esta manera, la secuencia de \textit{patches} generados en base a la imagen se emplearía como secuencia de entrada en un Vision Transformers (al estar las arquitecturas basadas en transformers especializadas en el procesamiento de secuencias).
+
+Dicha capa se aplicó en ConvNeXT al comprobarse experimentalmente que mejoraba la precisión del modelo en comparación con las \textit{stem cells} empleadas en redes convolucionales convencionales.
 
 \subsection{Decoder}
 
@@ -144,6 +172,16 @@ Las operaciones realizadas en cada CDB son las siguientes:
 
 Entre cada par de capas, se aplica una capa de normalización. Además, en cada capa de normalización se suma el resultado de la anterior capa de normalización (funcionando así además como capas residuales).
 
+\subsection{Fusión}
+
+Tras el \textit{encoder} y el \textit{decoder}, la red DDColor contiene el denominado \textit{fusion module}, el cual realiza las siguientes operaciones:
+
+\begin{enumerate}
+  \item{Mediante un producto escalar, combinación del \textit{embedding} producido por el \textit{Pixel decoder} y el producido por el \textit{Colour decoder}.}
+  \item{Aplicación de una operación de convolución con kernel de tamaño 1x1 para obtener los canales \textit{A} y \textit{B}.}
+  \item{Concatenación de la imagen original en escala de grises (canal \textit{L}) y la imagen resultante de los dos pasos anteriores (canales \textit{A} y \textit{B}) para formar la imagen final.}
+\end{enumerate}
+
 \section{Implementación}
 
 Esta sección de la documentación  debe incluir la descripción de la implementación (pero no el código), especificando las tecnologías usadas, el diseño, módulos o partes principales. \textbf{Debe quedar muy claro cuál es la parte original implementada, qué repositorio se ha adaptado o bifurcado, qué librerías se han usado,  todo con referencias apropiadas}. Se debe describir (tanto en la aplicación, como en la documentación, como en la presentación) los pasos seguidos para resolver el problema que se plantea de la forma más divulgativa posible. 
@@ -194,7 +232,7 @@ Se debe justificar el trabajo realizado por cada componente del grupo, indicando
 
 
 \bibliography{main}{}
-\bibliographystyle{plain}
+\bibliographystyle{plainurl}
 -\newpage 
 
 \end{document}
