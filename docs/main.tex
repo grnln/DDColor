@@ -193,6 +193,104 @@ Tras el \textit{encoder} y el \textit{decoder}, la red DDColor contiene el denom
   \item{Concatenación de la imagen original en escala de grises (canal \textit{L}) y la imagen resultante de los dos pasos anteriores (canales \textit{A} y \textit{B}) para formar la imagen final.}
 \end{enumerate}
 
+\subsection{Métricas}
+La forma en la que se analizan los resultados obtenidos por el modelo es mediante métricas de evaluación y comparación de imágenes.
+Este aspecto resulta fundamental para el correcto estudio. Nos permite determinar automáticamente si las imágenes han sido peor o mejor colorizadas, y que conclusiones sacar de esos datos objetivos. 
+
+Se trata de un dominio que creemos complicado. En el artículo original apenas se le dedica un pequeño párrafo, pues se da por supuesto el conocimiento de las distintas opciones que hay para realizar dicha evaluación. Nosotros creemos en el gran interés académico que tiene esta información, y también creemos que necesita de un análisis profundo para conocer las métricas que debemos usar. Nos planteamos también la pregunta: siendo que cambiamos de dominio con respecto al original (no-fotorrealista), ¿debemos plantearnos seleccionar distintas métricas de las que ya se han ofrecido?
+
+En este apartado se hablará tanto de aquellas que han sido utilizadas para el desarrollo del artículo original; como de otras posibles alternativas que encajen mejor para evaluar nuestro modelo concreto.
+Cabe mencionar que normalmente no basta con una sola métrica para analizar el funcionamiento de un modelo, sino que se usa la combinación de varias para comprobar como funciona en distintos aspectos y tener un mejor análisis de los resultados.
+
+\subsubsection{Métricas usadas originalmente}
+
+Las métricas que fueron usadas son FID, CF y PSNR, detalladas brevemente a continuación. Como bien indica el paper original, “es una opinión ampliamente extendida que las métricas a nivel de píxel pueden no reflejar bien el rendimiento real de la colorización.”
+
+\paragraph{Fréchet Inception Distance: FID \cite{FID}}
+
+El FID constituye la métrica principal en la que se basa el estudio original y representa uno de los indicadores más empleados en evaluación de imágenes generadas por sistemas de inteligencia artificial. Es crucial destacar que FID compara conjuntos amplios de imágenes contra otros conjuntos de magnitud similar; por tanto, su aplicabilidad depende de disponer de conjuntos de datos suficientemente grandes para garantizar resultados confiables.
+
+Mide la distancia entre la distribución de características de imágenes generadas contra imágenes reales. Usa una red neuronal preentrenada (InceptionV3) para extraer características de alto nivel. Se suele utilizar para evaluación de imágenes generadas por IA.
+
+Pasos que se siguen para evaluar imágenes.
+\begin{enumerate}
+	\item{\textbf{Extracción de características con red neuronal:} En lugar de realizar comparaciones directas a nivel de píxeles, FID utiliza InceptionV3 para extraer representaciones matemáticas de rasgos visuales (formas, texturas, estructuras) tanto de imágenes reales como generadas.}
+	
+	\item{\textbf{Resumen estadístico:} Se calculan dos estadísticos clave para cada conjunto: la media de las características visuales detectadas y la matriz de covarianza que describe cómo varían estas características y sus relaciones mutuas, asumiendo una distribución Gaussiana multidimensional.
+	}
+	
+	
+	\item{\textbf{Cálculo de la distancia (Fréchet):} Finalmente, se mide la diferencia entre las estadísticas de ambos conjuntos, comparando tanto las diferencias en los promedios como en las matrices de covarianza.}
+\end{enumerate}
+
+\begin{table}[h]
+	\centering
+	\begin{tabular}{|p{0.45\textwidth}|p{0.45\textwidth}|}
+		\hline
+		\textbf{Ventajas} & \textbf{Desventajas} 
+		\\ \hline
+		- Correlaciona bien con percepción humana & - Depende del modelo de InceptionV3 (entrenado en fotografías naturales) \\
+		- No depende de correspondencias pixel a pixel & - Puede sesgar evaluaciones en dominios no fotorrealistas \\
+		 & - No evalúa precisión semántica de colores \\ 
+		 & - Computacionalmente lenta \\ \hline
+	\end{tabular}
+\end{table}
+
+\paragraph{Colorfulness Score: CF \cite{CF}}
+Mide cuánto de "colorido" o "vívido" es una imagen. Se basa en la distribución de colores en el espacio RG-YB (rojo-verde, amarillo-azul). 
+Para un mejor análisis, el articulo original \cite{DDColor} no calcula simplemente el CF de la imágen coloreada, sino también de la imagen de ground truth, y luego calcula la diferencia ($\Delta CF$) lo que si nos da un dato sobre el que trabajar. 
+
+Se siguen los siguientes pasos para el cálculo:
+\begin{enumerate}
+	\item{Para cada píxel, se calculan dos valores basados en los canales RGB \\ $rg = R - G$ \\ $yb = 0.5 * (R + G) - B$}
+
+
+	\item{Se calculan la media aritmética y la desviación estándar de los valores rg e yb para todos los píxeles de la imagen.}
+	
+	\item{Se aplica una fórmula que combina tanto la desviación estándar (que captura variabilidad) como la media (que captura intensidad cromática) \\ \[ CF = \sqrt{\sigma_{RG}^2 + \sigma_{YB}^2} + 0.3 \cdot \sqrt{\mu_{RG}^2 + \mu_{YB}^2} \]}
+\end{enumerate}
+
+\begin{table}[h]
+	\centering
+	\begin{tabular}{|p{0.45\textwidth}|p{0.45\textwidth}|}
+		\hline
+		\textbf{Ventajas} & \textbf{Desventajas} 
+		\\ \hline
+		- Baja complejidad computacional y alta eficiencia. & - Ausencia de validación semántica (no detecta incoherencia en el uso de los colores). \\
+		- Capacidad para cuantificar la diversidad y saturación cromática. & - No garantiza la precisión contextual de la colorimetría aplicada. \\ \hline
+	\end{tabular}
+\end{table}
+
+\paragraph{Peak Signal-to-Noise Ratio: PSNR \cite{PSNR}}
+
+PSNR constituye una métrica clásica de similitud basada en comparación directa de valores RGB píxel a píxel. Penaliza cualquier discrepancia numérica entre los píxeles de la imagen generada e imagen real, sin considerar que diferencias imperceptibles al ojo humano pueden generar variaciones significativas en el valor de PSNR.
+
+Cabe mencionar que ya se decía en el artículo original que esta métrica no es la más indicada para reflejar trabajos de colorizacion. \cite{DDColor}, aunque igual se añade al conjunto de métricas para ampliar el análisis.
+
+Su funcionamiento es el siguiente:
+
+\begin{enumerate}
+	\item {El algoritmo hace el cálculo del error cuadrático promedio entre píxeles correspondientes de ambas imágenes (MSE) \\
+	
+	\[ \text{MSE} = \frac{1}{N} \sum (\text{pixel}_{\text{real}} - \text{pixel}_{\text{generada}})^2 \quad [N = \text{número total de píxeles}] \] }
+	
+	
+	\item {Aplica una transformación logarítmica para expresar la relación entre la potencia máxima posible y el ruido (error). \\ 
+	\[ \text{PSNR} = 10 \cdot \log_{10} \left( \frac{\text{MAX}^2}{\text{MSE}} \right) \quad [\text{MAX} = 255 \text{ para imágenes de 8 bits}] \]}
+\end{enumerate}
+
+\begin{table}[h]
+	\centering
+	\begin{tabular}{|p{0.45\textwidth}|p{0.45\textwidth}|}
+		\hline
+		\textbf{Ventajas} & \textbf{Desventajas} 
+		\\ \hline
+		- Interpretación intuitiva de los resultados. & - Limitaciones en tareas específicas de colorización. \\
+		- Alta eficiencia computacional. & - Sensibilidad extrema a desplazamientos espaciales (un pequeño movimiento de píxeles reduce drásticamente el PSNR). \\
+		& - No refleja la fidelidad visual humana, centrándose únicamente en el error cuadrático promedio. \\ \hline
+	\end{tabular}
+\end{table}
+
 \section{Implementación}
 
 Para este proyecto, se realizó un \textit{fork} del repositorio de GitHub en el que reside la implementación de la red DDColor:
