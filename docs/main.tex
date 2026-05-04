@@ -85,7 +85,7 @@ La arquitectura de ConvNeXT es la siguiente:
 
 \begin{enumerate}
   \item{Capa de convolución con un kernel de tamaño 4x4 (\textit{patchify}).}
-  \item{Varios bloques con la misma estructura:}
+  \item{Cuatro ``stages'', cada uno con un número configurable de bloques con la misma estructura:}
   \begin{enumerate}
     \item{Capa de convolución \textit{depthwise} (se aplica la misma convolución a cada canal de la imagen por separado) con kernel de tamaño 7x7.}
     \item{Capa de normalización \textit{LayerNorm}.}
@@ -102,6 +102,18 @@ Esta capa se sitúa al inicio de la red, en lo que se denomina la \textit{stem c
 Su función es transformar la imagen en una serie de \textit{patches} (en el caso de esta red, mediante una convolución de 4x4). De esta manera, la secuencia de \textit{patches} generados en base a la imagen se emplearía como secuencia de entrada en un Vision Transformers (al estar las arquitecturas basadas en transformers especializadas en el procesamiento de secuencias).
 
 Dicha capa se aplicó en ConvNeXT al comprobarse experimentalmente que mejoraba la precisión del modelo en comparación con las \textit{stem cells} empleadas en redes convolucionales convencionales.
+
+Dependiendo del número de bloques y de canales en cada ``stage'', se distinguen múltiples variantes:
+
+\begin{itemize}
+  \item{ConvNeXT-T}
+  \item{ConvNeXT-S}
+  \item{ConvNeXT-B}
+  \item{ConvNeXT-L}
+  \item{ConvNeXT-XL}
+\end{itemize}
+
+En DDColor se utilizan las variantes ConvNeXT-T y ConvNeXT-L.
 
 \subsection{Decoder}
 
@@ -139,7 +151,9 @@ La \textit{colour query} inicial (la empleada como entrada del primer CDB de la 
 
 Antes de proceder con las operaciones realizadas dentro de cada CDB, se explicarán brevemente los mecanismos de atención empleados.
 
-\paragraph{Los mecanismos de atención} tienen tres características principales \cite{IBMAttention}:
+\paragraph{Mecanismos de atención}
+
+Tienen tres características principales \cite{IBMAttention}:
 
 \begin{enumerate}
   \item{Leen \textbf{secuencias de datos} y las transforman en \textit{embeddings} vectoriales.}
@@ -178,7 +192,15 @@ Las operaciones realizadas en cada CDB son las siguientes:
 \begin{enumerate}
   \item{\textbf{Capa de atención cruzada} empleando el mapa de características como \textit{key} y \textit{value} y con la colour query como \textit{query}.}
   \item{\textbf{Capa de autoatención} empleando el resultado de la anterior como \textit{query}, \textit{key} y \textit{value}.}
-  \item{\textbf{Red feed-forward} empleando el resultado de la anterior como entrada. Se trata de una red neuronal convencional, empleando dos capas lineales con una capa de \textit{drop-out} entre las mismas (la cual cambia aleatoriamente a cero determinados valores en base a una probabilidad), así como una capa de normalización y una activación ReLU.}
+  \item{\textbf{Red feed-forward} empleando el resultado de la anterior como entrada. Se trata de una red neuronal convencional, empleando la siguiente arquitectura:
+    \begin{enumerate}
+      \item{Capa lineal.}
+      \item{Capa de \textit{drop-out} (cambia a 0 determinados valores del vector de entrada aleatoriamente según un valor probabilidad ajustable).}
+      \item{Capa lineal.}
+      \item{Capa de normalización.}
+      \item{Función de activación ReLU.}
+    \end{enumerate}
+  }
 \end{enumerate}
 
 Entre cada par de capas, se aplica una capa de normalización. Además, en cada capa de normalización se suma el resultado de la anterior capa de normalización (funcionando así además como capas residuales).
@@ -332,6 +354,107 @@ El código está principalmente contenido en tres directorios del repositorio:
 Adicionalmente, el directorio raíz del repositorio contiene un archivo \texttt{setup.py}, empleado para realizar la configuración inicial del proyecto.
 
 \subsection{DDColor}
+
+En el directorio \texttt{ddcolor} reside la implementación de la red DDcolor, contenida en dos archivos:
+
+\begin{itemize}
+  \item{\texttt{model.py}: Contiene la implementación del modelo en sí.}
+  \item{\texttt{pipeline.py}: Contiene la implementación de la \textit{pipeline} empleada para colorizar imágenes mediante DDColor.}
+\end{itemize}
+
+A continuación, se analizarán ambos módulos por separado.
+
+\subsubsection{Modelo}
+
+El modelo DDColor se implementa como tres módulos de Torch:
+
+\begin{itemize}
+  \item{\texttt{DDColor}: Implementa la arquitectura de la red a alto nivel, invocando a los demás módulos internamente cuando sea necesario.}
+  \item{\texttt{ImageEncoder}: Implementa la sección del \textit{encoder}, invocando a la red ConvNeXT (preentrenada) internamente.}
+  \item{\texttt{DuelDecoder}: Implementa la arquitectura de la sección del \textit{decoder} a alto nivel, invocando tanto a una versión customizada de PixelShuffle (\textit{pixel decoder}) como al módulo \texttt{MultiScaleColorDecoder} (\textit{colour decoder}) internamente.}
+  \item{\texttt{MultiScaleColorDecoder}: Implementa la sección correspondiente al \textit{colour decoder}, implementando una arquitectura similar a un transformer.}
+\end{itemize}
+
+A continuación se explicará en mayor profundidad cómo funciona cada uno de ellos.
+
+\paragraph{Módulo DDColor}
+
+Este módulo permite configurar varios parámetros de la red mediante su constructor, entre los cuales se hallan:
+
+\begin{itemize}
+  \item{\textit{Encoder} a utilizar: Por defecto, \texttt{``convnext-l''} (ConvNeXT).}
+  \item{\textit{Decoder} a utilizar: Por defecto, \texttt{MultiScaleColorDecoder}.}
+  \item{Tamaño de entrada: Por defecto, 256x256 píxeles y 3 canales.}
+  \item{Número de canales de salida: Por defecto, 3.}
+  \item{Número de \textit{colour queries} a emplear para la colorización: Por defecto, 256.}
+\end{itemize}
+
+La mayoría de estos parámetros se emplean después como parámetros de entrada para los módulos instanciados internamente.
+
+Este módulo define tanto el \textit{encoder} como el \textit{decoder} a utilizar (instanciándolos como módulos de Torch para su uso interno) y, además, instancia una capa de convolución custom (procedente de \texttt{BasicSR}) con un kernel de tamaño 1x1 para realizar la fusión.
+
+Cuando este módulo es invocado, sencillamente invoca a la instancia del \texttt{ImageEncoder} construida, luego a la instancia del \texttt{DuelDecoder}, y posteriormente a la capa de refinación (convolución de 1x1) para la fusión.
+
+\paragraph{Módulo ImageEncoder}
+
+Este módulo actúa principalmente como un \textit{wrapper} en torno a ConvNeXT.
+
+Permite configurar los siguientes parámetros:
+
+\begin{itemize}
+  \item{Nombre del \textit{encoder} a emplear: Por defecto se emplea \texttt{``convnext-l''}.}
+  \item{\textit{Hooks} a añadir al \textit{decoder}.}
+\end{itemize}
+
+El módulo se limita a instanciar ConvNeXT con los parámetros adecuados.
+
+En primer lugar, el nombre del \textit{encoder} actúa como un potencial punto de variabilidad del sistema, al teóricamente permitir conectar múltiples modelos diferentes a la red, mas la implementación lo restringe a solo dos posibles valores: \texttt{``convnext-t''} y \texttt{``convnext-l''}.
+
+De esta manera, este parámetro solo determina las ``profundidades'' del modelo ConvNeXT a instanciar, es decir, el número de bloques que habrá en cada \textit{stage} del modelo ConvNeXT instanciado.
+
+Posteriormente, los \textit{hooks} se ajustan mediante una lista de cadenas de texto, y no son realmente configurables por el usuario de DDColor, sino que el módulo \texttt{DDColor} los ajusta manualmente al construir la instancia.
+
+En cuanto a su propósito, indican en qué puntos extraer el estado actual del mapa de características generado (lo cual es necesario para extraer los mapas de características a distintas resoluciones que se envían como \textit{shortcut connections} al \textit{colour decoder}).
+
+Cuando este módulo es invocado, invoca a la instancia de ConvNeXT construida.
+
+\paragraph{Módulo DuelDecoder}
+
+Este módulo recibe como parámetro de entrada la lista de \textit{hooks} también introducida en el anterior módulo y actúa como un wrapper sobre los dos \textit{decoders} de la red:
+
+\begin{itemize}
+  \item{El \textit{pixel decoder}, implementado directamente en este módulo como una sucesión de capas PixelShuffle modificadas.}
+  \item{El \textit{colour decoder}, implementado en el módulo \texttt{MultiScaleColorDecoder}.}
+\end{itemize}
+
+Además, permite ajustar, entre otros, los siguientes parámetros:
+
+\begin{itemize}
+  \item{Nombre del \textit{colour decoder} a emplear: Por defecto \texttt{``MultiScaleColorDecoder''}, el cual a su vez es el único valor tolerado por la propiedad.}
+  \item{Número de \textit{queries} a refinar en el \textit{colour decoder}.}
+\end{itemize}
+
+La estructura empleada para el \textit{pixel decoder} consiste en una serie de instancias del módulo \texttt{UNetBlockWide} (definido en \texttt{BasicSR}), que a su vez está construido en torno a una versión personalizada de una capa PixelShuffle.
+
+Se añade una instancia para cada \textit{hook} añadido al \textit{encoder}, comenzando por el último y exceptuando el primero, y, para el primer hook, una instancia directa de la capa PixelShuffle personalizada.
+
+\paragraph{Módulo MultiScaleColorDecoder}
+
+Este módulo se encarga de implementar el \textit{colour decoder}, empleando para ello una arquitectura similar a la de un transformer.
+
+Tiene, entre otros, los siguientes parámetros configurables:
+
+\begin{itemize}
+  \item{Número de \textit{colour queries} a aprender y refinar (por defecto, 100).}
+  \item{Númreo de capas a emplear (número de CDBs a emplear), por defecto 9.}
+  \item{Dimensión intermedia de la \textit{feed-forward network}.}
+\end{itemize}
+
+Además, este módulo se encarga de inicializar los \textit{embeddings} a emplear para la decodificación.
+
+Aparte de instanciar la arquitectura que se explicó en la sección correspondiente del planteamiento teórico, este módulo instancia también una capa de codificación posicional (\texttt{PositionEmbeddingSine}, definida en \texttt{BasicSR}), la cual se emplea para generar un \textit{embedding} posicional en base a la entrada de la red.
+
+\subsubsection{Pipeline}
 
 \subsection{BasicSR}
 
