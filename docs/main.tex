@@ -221,29 +221,23 @@ Este aspecto resulta fundamental para el correcto estudio. Nos permite determina
 
 Se trata de un dominio que creemos complicado. En el artículo original apenas se le dedica un pequeño párrafo, pues se da por supuesto el conocimiento de las distintas opciones que hay para realizar dicha evaluación. Nosotros creemos en el gran interés académico que tiene esta información, y también creemos que necesita de un análisis profundo para conocer las métricas que debemos usar. Nos planteamos también la pregunta: siendo que cambiamos de dominio con respecto al original (no-fotorrealista), ¿debemos plantearnos seleccionar distintas métricas de las que ya se han ofrecido?
 
-En este apartado se hablará tanto de aquellas que han sido utilizadas para el desarrollo del artículo original; como de otras posibles alternativas que encajen mejor para evaluar nuestro modelo concreto.
-Cabe mencionar que normalmente no basta con una sola métrica para analizar el funcionamiento de un modelo, sino que se usa la combinación de varias para comprobar como funciona en distintos aspectos y tener un mejor análisis de los resultados.
+Cabe mencionar que normalmente no basta con una sola métrica para analizar los resultados de un modelo, sino que se usa la combinación de varias para comprobar como funciona en distintos aspectos y tener un mejor análisis de los resultados.
 
-\subsubsection{Métricas usadas originalmente}
+En este apartado se discutirán las métricas ya utilizadas en el artículo original, y otras nuevas posibles alternativas que encajen mejor para evaluar nuestro modelo concreto. Las separaremos en dos bloques, aquellas que hemos descartado, y las dos que hemos seleccionado, que serán explicadas con más detalle.
+\bigskip
 
-Las métricas que fueron usadas son FID, CF y PSNR, detalladas brevemente a continuación. Como bien indica el paper original, “es una opinión ampliamente extendida que las métricas a nivel de píxel pueden no reflejar bien el rendimiento real de la colorización.”
+\textbf{En definitiva, discutiremos FID, $\Delta CF$, PSNR (originales), $\Delta E$ , LPIPS y SSIM (nuevas)}
 
-\paragraph{Fréchet Inception Distance: FID \cite{FID}}
+\subsubsection{Métricas descartadas}
+Se presentan en esta sección aquellas métricas que han sido analizadas, pero descartadas por algún motivo, que será explicado en cada una. No se entrará en el detalle del funcionamiento, pretendiendo poder profundizar plenamente en las que si usaremos.
+
+\paragraph{ • Fréchet Inception Distance: FID \cite{FID}}
 
 El FID constituye la métrica principal en la que se basa el estudio original y representa uno de los indicadores más empleados en evaluación de imágenes generadas por sistemas de inteligencia artificial. Es crucial destacar que FID compara conjuntos amplios de imágenes contra otros conjuntos de magnitud similar; por tanto, su aplicabilidad depende de disponer de conjuntos de datos suficientemente grandes para garantizar resultados confiables.
 
 Mide la distancia entre la distribución de características de imágenes generadas contra imágenes reales. Usa una red neuronal preentrenada (InceptionV3) para extraer características de alto nivel. Se suele utilizar para evaluación de imágenes generadas por IA.
 
-Pasos que se siguen para evaluar imágenes.
-\begin{enumerate}
-	\item{\textbf{Extracción de características con red neuronal:} En lugar de realizar comparaciones directas a nivel de píxeles, FID utiliza InceptionV3 para extraer representaciones matemáticas de rasgos visuales (formas, texturas, estructuras) tanto de imágenes reales como generadas.}
-	
-	\item{\textbf{Resumen estadístico:} Se calculan dos estadísticos clave para cada conjunto: la media de las características visuales detectadas y la matriz de covarianza que describe cómo varían estas características y sus relaciones mutuas, asumiendo una distribución Gaussiana multidimensional.
-	}
-	
-	
-	\item{\textbf{Cálculo de la distancia (Fréchet):} Finalmente, se mide la diferencia entre las estadísticas de ambos conjuntos, comparando tanto las diferencias en los promedios como en las matrices de covarianza.}
-\end{enumerate}
+A grandes rasgos, primeramente FID extrae  las características del conjunto de imágenes con la red neuronal. Luego sobre esas características, o features se calculan dos estadísticos clave para cada conjunto: la media de las características visuales detectadas y la matriz de covarianza. Finalmente, se mide la diferencia entre las estadísticas de ambos conjuntos.
 
 \begin{table}[h]
 	\centering
@@ -254,52 +248,19 @@ Pasos que se siguen para evaluar imágenes.
 		- Correlaciona bien con percepción humana & - Depende del modelo de InceptionV3 (entrenado en fotografías naturales) \\
 		- No depende de correspondencias pixel a pixel & - Puede sesgar evaluaciones en dominios no fotorrealistas \\
 		 & - No evalúa precisión semántica de colores \\ 
-		 & - Computacionalmente lenta \\ \hline
+		 & - Computacionalmente lenta \\ 
+		 & - Compleja en su entendimiento y uso \\
+		 & - Requiere de largos datasets \\ \hline
 	\end{tabular}
 \end{table}
 
-\paragraph{Colorfulness Score: CF \cite{CF}}
-Mide cuánto de ``colorida'' o ``vívida'' es una imagen. Se basa en la distribución de colores en el espacio RG-YB (rojo-verde, amarillo-azul). 
-Para un mejor análisis, el articulo original \cite{DDColor} no calcula simplemente el CF de la imágen coloreada, sino también de la imagen de ground truth, y luego calcula la diferencia ($\Delta CF$) lo que si nos da un dato sobre el que trabajar. 
+\textbf{Razón de descarte:} Si bien FID promete un buen desempeño (por algo resulta la primera fuente de confianza del paper DDColor \cite{DDColor}) resulta ser demasiado compleja, no solo en su arquitectura que utiliza redes neurales externas, sino además en su uso, comparando dos grandes datasets, y los problemas que pueden derivar, véase, que no sea suficientemente grande para un buen rendimiento. Puesto que uno de los objetivos de este trabajo es el profundizamiento sobre procesos digitales, nos centraremos en otras métricas que funcionen a nivel local y que no dependan de IA. 
 
-Se siguen los siguientes pasos para el cálculo:
-\begin{enumerate}
-	\item{Para cada píxel, se calculan dos valores basados en los canales RGB \\ $rg = R - G$ \\ $yb = 0.5 * (R + G) - B$}
+\paragraph{ • Peak Signal-to-Noise Ratio: PSNR \cite{PSNR}}
 
-
-	\item{Se calculan la media aritmética y la desviación estándar de los valores rg e yb para todos los píxeles de la imagen.}
-	
-	\item{Se aplica una fórmula que combina tanto la desviación estándar (que captura variabilidad) como la media (que captura intensidad cromática) \\ \[ CF = \sqrt{\sigma_{RG}^2 + \sigma_{YB}^2} + 0.3 \cdot \sqrt{\mu_{RG}^2 + \mu_{YB}^2} \]}
-\end{enumerate}
-
-\begin{table}[h]
-	\centering
-	\begin{tabular}{|p{0.45\textwidth}|p{0.45\textwidth}|}
-		\hline
-		\textbf{Ventajas} & \textbf{Desventajas} 
-		\\ \hline
-		- Baja complejidad computacional y alta eficiencia. & - Ausencia de validación semántica (no detecta incoherencia en el uso de los colores). \\
-		- Capacidad para cuantificar la diversidad y saturación cromática. & - No garantiza la precisión contextual de la colorimetría aplicada. \\ \hline
-	\end{tabular}
-\end{table}
-
-\paragraph{Peak Signal-to-Noise Ratio: PSNR \cite{PSNR}}
-
-PSNR constituye una métrica clásica de similitud basada en comparación directa de valores RGB píxel a píxel. Penaliza cualquier discrepancia numérica entre los píxeles de la imagen generada e imagen real, sin considerar que diferencias imperceptibles al ojo humano pueden generar variaciones significativas en el valor de PSNR.
+PSNR constituye una métrica clásica de similitud basada en comparación directa de valores RGB píxel a píxel. También fue utilizada en el paper DDColor \cite{DDColor}. Penaliza cualquier discrepancia numérica entre los píxeles de la imagen generada e imagen real, sin considerar que diferencias imperceptibles al ojo humano pueden generar variaciones significativas en el valor de PSNR.
 
 Cabe mencionar que ya se decía en el artículo original que esta métrica no es la más indicada para reflejar trabajos de colorizacion. \cite{DDColor}, aunque igual se añade al conjunto de métricas para ampliar el análisis.
-
-Su funcionamiento es el siguiente:
-
-\begin{enumerate}
-	\item {El algoritmo hace el cálculo del error cuadrático promedio entre píxeles correspondientes de ambas imágenes (MSE) \\
-	
-	\[ \text{MSE} = \frac{1}{N} \sum (\text{pixel}_{\text{real}} - \text{pixel}_{\text{generada}})^2 \quad [N = \text{número total de píxeles}] \] }
-	
-	
-	\item {Aplica una transformación logarítmica para expresar la relación entre la potencia máxima posible y el ruido (error). \\ 
-	\[ \text{PSNR} = 10 \cdot \log_{10} \left( \frac{\text{MAX}^2}{\text{MSE}} \right) \quad [\text{MAX} = 255 \text{ para imágenes de 8 bits}] \]}
-\end{enumerate}
 
 \begin{table}[h]
 	\centering
@@ -312,6 +273,229 @@ Su funcionamiento es el siguiente:
 		& - No refleja la fidelidad visual humana, centrándose únicamente en el error cuadrático promedio. \\ \hline
 	\end{tabular}
 \end{table}
+
+\textbf{Razón de descarte:} Si bien PNSR trabaja mucho más rápido que FID, es más versátil, menos compleja y fácil de utilzar, no es ideal para colorización de imágenes. Creemos que existen otras alternativas que nos puedan dar información más valiosa sobre colorización, sin penalizar tanto las pequeñas discrepancias. 
+
+\paragraph{ • Índice de Similitud Estructural: SSIM \cite{SSIM}}
+
+SSIM es una métrica que no aparece en el paper original, pero que en algún momento consideramos añadir. A diferencia de PSNR, no realiza comparaciones exclusivamente a nivel de píxeles aislados, sino que analiza regiones locales de la imagen (ventanas normalmente de 11x11 pixeles) evaluando tres componentes: luminiscencia, contraste y estructura. El resultado final es un promedio ponderado de las similitudes locales. Debe considerarse que dos imágenes con estructura idéntica pero colores completamente distintos pueden obtener valores SSIM elevados.
+
+\begin{table}[h]
+	\centering
+	\begin{tabular}{|p{0.45\textwidth}|p{0.45\textwidth}|}
+		\hline
+		\textbf{Ventajas} & \textbf{Desventajas} 
+		\\ \hline
+		- Métrica estable y ampliamente utilizada en evaluación de imágenes & - No realiza análisis semántico del acierto en colorización \\
+		- Alta eficiencia computacional. & - Principalmente captura estructura, no es importante para colorización \\
+		- Rápida y facil de usar & - Como la estructura es idéntica, SSIM tiende a valores muy altos en casi todos los casos \\ \hline
+	\end{tabular}
+\end{table}
+
+\textbf{Razón de descarte:} Al igual que ocurre con PSNR, SSIM nos ofrece una métrica rápida y versátil, idependiente de modelos de redes neuronales; pero que no encaja con el dominio de colorización de imágenes.
+
+
+\subsubsection{Métricas utilizadas}
+
+Las métricas seleccionadas finalmente han sido $\Delta CF$ y $\Delta E$, debido a su enfoque directo en la cuantificación de diferencias de color, que constituye el objetivo principal del análisis. Frente a alternativas como FID, que implica el uso de modelos de IA preentrenados y añade una complejidad computacional innecesaria para este contexto, o métricas tradicionales como SSIM y PSNR, más orientadas a evaluar similitud estructural o fidelidad de señal, pero con escasa sensibilidad específica al color, $\Delta CF$ y  $\Delta E$ ofrecen una evaluación más precisa y relevante. De este modo, se priorizan métricas interpretables, específicas y alineadas con la naturaleza del problema abordado.
+Veamoslas con más detalle.
+
+\paragraph{ • Colorfulness Score: CF \cite{CF}}
+
+La métrica $\Delta CF$ se fundamenta en la comparación del \textit{Colorfulness} (CF) entre dos imágenes. El término CF hace referencia a la percepción subjetiva de la viveza o intensidad cromática de una imagen, es decir, cómo de “colorida” resulta visualmente. Esta medida fue diseñada específicamente para capturar propiedades relacionadas con la distribución y variabilidad del color, a diferencia de otras métricas que priorizan aspectos estructurales o de luminancia.
+
+El objetivo de $\Delta CF$ es cuantificar la variación global de color entre dos imágenes mediante la diferencia entre sus respectivos valores de CF. De este modo, se obtiene una medida directa del cambio en la percepción cromática.
+
+\medskip
+\textbf{Espacio de color y canales utilizados}
+
+El cálculo de CF se realiza partiendo del espacio de color RGB, donde cada píxel está representado por tres canales: rojo ($R$), verde ($G$) y azul ($B$). Sin embargo, la métrica no opera directamente sobre estos tres canales de forma independiente, sino que transforma la información en dos componentes cromáticas diseñadas para aproximar la percepción humana del color.
+
+Estas componentes son:
+
+\begin{itemize}
+	\item Diferencia rojo-verde:
+	\begin{equation}
+		rg = R - G
+	\end{equation}
+	
+	\item Diferencia amarillo-azul:
+	\begin{equation}
+		yb = \frac{1}{2}(R + G) - B
+	\end{equation}
+\end{itemize}
+
+Estas transformaciones combinan los tres canales RGB en dos ejes cromáticos principales. Por tanto, aunque el cálculo de CF utiliza información proveniente de los tres canales originales, no se evalúan de manera independiente, sino a través de estas dos componentes que capturan relaciones perceptuales entre ellos.
+
+\medskip
+\textbf{Cálculo del Colorfulness (CF)}
+
+El algoritmo para calcular CF sigue los siguientes pasos:
+
+\begin{enumerate}
+	\item Para cada píxel de la imagen, se calculan las componentes $rg$ y $yb$ a partir de los valores de $R$, $G$ y $B$.
+	
+	\item Se obtienen la media y la desviación estándar de ambas componentes en toda la imagen:
+	\begin{equation}
+		\mu_{rg}, \quad \sigma_{rg}
+	\end{equation}
+	\begin{equation}
+		\mu_{yb}, \quad \sigma_{yb}
+	\end{equation}
+	
+	\item Se combinan estos valores para obtener la medida de Colorfulness:
+	\begin{equation}
+		CF = \sqrt{\sigma_{rg}^2 + \sigma_{yb}^2} + 0.3 \cdot \sqrt{\mu_{rg}^2 + \mu_{yb}^2}
+	\end{equation}
+\end{enumerate}
+
+El primer término de la ecuación mide la dispersión de los colores (variabilidad), mientras que el segundo introduce un ajuste basado en el sesgo medio de las componentes cromáticas.
+
+\medskip
+\textbf{Cálculo de $\Delta CF$}
+
+Una vez obtenido el valor de CF para cada una de las dos imágenes a comparar, la métrica $\Delta CF$ se define como:
+
+\begin{equation}
+	\Delta CF = | CF_1 - CF_2 |
+\end{equation}
+
+donde $CF_1$ y $CF_2$ representan los valores de Colorfulness de cada imagen.
+
+Esta diferencia permite evaluar de forma directa el cambio en la viveza cromática global entre ambas imágenes. Un valor elevado de $\Delta CF$ indica una diferencia notable en la intensidad o riqueza del color, mientras que valores cercanos a cero sugieren una apariencia cromática similar.
+
+\paragraph{ • Color diference: $\Delta E$ \cite{DeltaE}}
+
+
+La métrica $\Delta E$ se utiliza para cuantificar la diferencia perceptual entre dos colores. A diferencia de métricas basadas en RGB, $\Delta E$ se define en espacios de color perceptualmente uniformes, como CIELAB, donde las distancias euclidianas se corresponden mejor con las diferencias percibidas por el ojo humano.
+
+En el contexto de comparación de imágenes, $\Delta E$ permite evaluar cuánto difieren dos imágenes en términos de color a nivel perceptual, siendo especialmente útil en aplicaciones donde la fidelidad cromática es crítica.
+
+
+Existen varias formas de calcular Color Difference. Nosotros usaremos la métrica $\Delta E_{2000}$ representa el estado del arte en la cuantificación de diferencias perceptuales de color. A diferencia de formulaciones anteriores como $\Delta E_{76}$, que se basan en distancias euclídeas simples en el espacio CIELAB, $\Delta E_{2000}$ introduce una serie de correcciones no lineales diseñadas para ajustar la medida a la percepción real del ojo humano.
+
+Estas mejoras tienen en cuenta que la sensibilidad visual no es uniforme en todo el espacio de color, y que las diferencias en luminosidad, croma y tono no contribuyen de la misma manera a la percepción global.
+
+\medskip
+\textbf{Espacio de color CIELAB}
+
+Cada píxel se representa en el espacio CIELAB mediante tres componentes:
+
+\begin{itemize}
+	\item $L^*$: luminosidad
+	\item $a^*$: componente verde-rojo
+	\item $b^*$: componente azul-amarillo
+\end{itemize}
+
+Este espacio permite trabajar con magnitudes más alineadas con la percepción humana, siendo la base para el cálculo de $\Delta E$.
+
+\medskip
+\textbf{Descripción del algoritmo}
+
+El cálculo de $\Delta E_{2000}$ entre dos píxeles $(L_1, a_1, b_1)$ y $(L_2, a_2, b_2)$ se realiza mediante los siguientes pasos:
+
+\begin{enumerate}
+	
+	\item \textbf{Cálculo del croma}
+	
+	Se calcula el croma de cada color como:
+	
+	\begin{equation}
+		C_i = \sqrt{a_i^2 + b_i^2}
+	\end{equation}
+	
+	El croma representa la intensidad del color (saturación). Este paso permite separar la información de color en magnitudes más interpretables perceptualmente.
+	
+	\item \textbf{Ajuste del eje $a^*$}
+	
+	Se introduce un factor de corrección $G$ que modifica el canal $a^*$:
+	
+	\begin{equation}
+		a'_i = (1 + G)a_i
+	\end{equation}
+	
+	Este ajuste corrige desviaciones perceptuales, especialmente en colores cercanos al gris, donde el modelo CIELAB presenta menor precisión.
+	
+	\item \textbf{Nuevo croma y cálculo del tono}
+	
+	Con los valores ajustados, se recalcula el croma:
+	
+	\begin{equation}
+		C'_i = \sqrt{a'^2_i + b_i^2}
+	\end{equation}
+	
+	y el tono:
+	
+	\begin{equation}
+		h'_i = \arctan\left(\frac{b_i}{a'_i}\right)
+	\end{equation}
+	
+	El tono representa el tipo de color (rojo, azul, etc.), y se expresa como un ángulo.
+	
+	\item \textbf{Cálculo de diferencias}
+	
+	Se obtienen las diferencias en cada componente:
+	
+	\begin{equation}
+		\Delta L', \quad \Delta C', \quad \Delta H'
+	\end{equation}
+	
+	La diferencia de tono $\Delta H'$ se calcula de forma especial para evitar discontinuidades angulares, asegurando continuidad perceptual.
+	
+	\item \textbf{Factores de ponderación}
+	
+	Se introducen factores de escala:
+	
+	\begin{equation}
+		S_L, \quad S_C, \quad S_H
+	\end{equation}
+	
+	Estos factores ajustan la importancia relativa de cada componente (luminosidad, croma y tono), reflejando que el ojo humano no percibe todas las variaciones con la misma sensibilidad.
+	
+	\item \textbf{Término de interacción}
+	
+	Se incorpora un término de rotación $R_T$, que modela la interacción entre croma y tono:
+	
+	\begin{equation}
+		R_T
+	\end{equation}
+	
+	Este término corrige regiones específicas del espacio de color (especialmente tonos azulados) donde las diferencias perceptuales no son lineales.
+	
+	\item \textbf{Cálculo final}
+	
+	La diferencia de color se obtiene como:
+	
+	\begin{equation}
+		\Delta E_{2000} =
+		\sqrt{
+			\left(\frac{\Delta L'}{S_L}\right)^2 +
+			\left(\frac{\Delta C'}{S_C}\right)^2 +
+			\left(\frac{\Delta H'}{S_H}\right)^2 +
+			R_T \cdot \frac{\Delta C'}{S_C} \cdot \frac{\Delta H'}{S_H}
+		}
+	\end{equation}
+	
+\end{enumerate}
+
+\medskip
+\textbf{Aplicación a imágenes}
+
+Para comparar dos imágenes, el proceso se realiza píxel a píxel:
+
+\begin{enumerate}
+	\item Convertir ambas imágenes a CIELAB.
+	\item Calcular $\Delta E_{2000}$ para cada par de píxeles correspondientes.
+	\item Obtener una medida global mediante la media:
+	\begin{equation}
+		\Delta E = \frac{1}{N} \sum_{i=1}^{N} \Delta E_{2000}(i)
+	\end{equation}
+\end{enumerate}
+
+\medskip
+\textbf{Interpretación}
+
+Valores bajos de $\Delta E_{2000}$ indican diferencias apenas perceptibles, mientras que valores altos corresponden a cambios visibles en el color. Esta métrica proporciona una medida robusta y alineada con la percepción humana, lo que justifica su uso como estándar en aplicaciones de análisis de color.
 
 \section{Implementación}
 
