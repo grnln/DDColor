@@ -653,7 +653,96 @@ Una sección de ejemplos comentados y pruebas realizadas con la implementación 
 
 \section{Manual de usuario}
 
-Se debe incluir un breve manual de usuario en caso de que se desarrolle una aplicación propia. Si se implementa un notebook de Jupyter, no es necesario un manual de usuario, sino que debe quedar muy guiado, explicando todos los pasos y parámetros.  
+La aplicación \textit{DDColor Lab} es una herramienta de escritorio desarrollada en Python que permite colorizar imágenes en escala de grises mediante los modelos DDColor y comparar los resultados de forma visual y cuantitativa.
+
+\subsection{Requisitos previos}
+
+Para ejecutar la aplicación es necesario tener instaladas las siguientes dependencias:
+
+\begin{itemize}
+  \item \texttt{torch} y \texttt{torchvision}: framework de redes neuronales.
+  \item \texttt{opencv-python}: operaciones de visión por ordenador.
+  \item \texttt{pillow}: lectura y procesamiento de imágenes.
+  \item \texttt{scikit-image}: necesario para el cálculo de la métrica $\Delta E$.
+  \item \texttt{lpips}: necesario para el cálculo de la métrica LPIPS. Opcional; si no está instalado, dicha métrica mostrará \texttt{---}.
+  \item El paquete \texttt{ddcolor} instalado en modo desarrollo (\texttt{python setup.py develop}).
+\end{itemize}
+
+Además, deben colocarse los pesos de los modelos en el directorio \texttt{./models/} con los siguientes nombres:
+
+\begin{itemize}
+  \item \texttt{ddcolor\_comic.pth}: modelo fine-tuned sobre imágenes de cómic.
+  \item \texttt{ddcolor\_realistic.pth}: modelo oficial de ModelScope (realista).
+  \item \texttt{ddcolor\_artistic.pth}: modelo artístico de ModelScope.
+\end{itemize}
+
+Si alguno de los pesos no está disponible, la aplicación entra automáticamente en \textbf{modo DEMO} para ese modelo, aplicando una colorización sintética de demostración sin necesidad de ejecutar la red neuronal.
+
+\subsection{Puesta en marcha}
+
+Una vez cumplidos los requisitos, la aplicación se lanza ejecutando:
+
+\begin{verbatim}
+python ddcolor_desktop.py
+\end{verbatim}
+
+Al iniciarse, la aplicación carga los modelos en segundo plano e indica su estado en la esquina superior derecha de la ventana (\textit{Listo} en verde si todos los pesos se han cargado correctamente, o en ámbar si alguno opera en modo DEMO).
+
+\subsection{Interfaz}
+
+La ventana principal se divide en tres pestañas:
+
+\begin{itemize}
+  \item \textbf{Colorizar y comparar}: flujo principal de uso.
+  \item \textbf{Métricas}: tabla comparativa con los resultados numéricos de la última colorización.
+  \item \textbf{Guía}: documentación integrada sobre instalación, modelos y métricas.
+\end{itemize}
+
+\subsection{Flujo de uso}
+
+\subsubsection{Cargar una imagen}
+
+En el panel izquierdo, pulsar el botón \textit{Abrir imagen} o hacer clic sobre la miniatura. Se abrirá un explorador de archivos que admite los formatos \texttt{PNG}, \texttt{JPG}, \texttt{BMP}, \texttt{TIFF} y \texttt{WebP}. La imagen seleccionada se mostrará como miniatura y se usará automáticamente como \textit{ground truth} para el cálculo de métricas.
+
+\subsubsection{Seleccionar un ground truth alternativo (opcional)}
+
+Si se dispone de una versión coloreada de referencia distinta a la propia imagen de entrada, puede cargarse mediante el botón \textit{Abrir GT (opcional)}. Esto permite obtener métricas comparativas más significativas cuando se trabaja con imágenes originalmente en escala de grises.
+
+\subsubsection{Seleccionar los modelos}
+
+Las tres casillas de verificación del panel izquierdo permiten activar o desactivar individualmente cada modelo:
+
+\begin{itemize}
+  \item \textbf{Cómic FT} (azul): modelo fine-tuned sobre el dataset de cómics.
+  \item \textbf{Realista HF} (morado): modelo oficial de DDColor orientado a fotografía.
+  \item \textbf{Artístico HF} (naranja): modelo oficial de DDColor con estilo artístico.
+\end{itemize}
+
+\subsubsection{Ejecutar la colorización}
+
+Pulsar el botón \textit{Ejecutar}. La barra de progreso indica que el proceso está en curso. Una vez finalizado, los resultados se muestran en el panel derecho: el modelo Cómic FT en la columna izquierda, y los modelos Realista y Artístico en pestañas intercambiables en la columna derecha.
+
+\subsubsection{Consultar las métricas}
+
+Navegar a la pestaña \textbf{Métricas} para ver la tabla comparativa. Para cada métrica, se marca en verde el modelo que obtiene el mejor resultado. Las tres métricas disponibles son:
+
+\begin{itemize}
+  \item $\Delta CF$: diferencia en viveza cromática respecto al ground truth. Valores cercanos a 0 indican que la paleta de color es similar a la referencia.
+  \item $\Delta E_{2000}$: error colorimétrico perceptual medio píxel a píxel en el espacio CIELAB. Un valor menor implica mayor fidelidad de color.
+  \item \textit{LPIPS}: similitud perceptual basada en características de red neuronal. Un valor menor indica mayor parecido visual con el ground truth.
+\end{itemize}
+
+\subsubsection{Guardar los resultados}
+
+Pulsar el botón \textit{Guardar resultados} para exportar las imágenes colorizadas a una carpeta de destino. Se generan hasta tres archivos \texttt{PNG}:
+
+\begin{itemize}
+  \item \texttt{result\_comic\_ft.png}
+  \item \texttt{result\_realistic\_hf.png}
+  \item \texttt{result\_artistic\_hf.png}
+\end{itemize}
+
+Solo se exportan los modelos que estaban activos y produjeron un resultado.
 
 \section{Conclusiones}
 
