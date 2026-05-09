@@ -730,7 +730,7 @@ A continuación se ilustra el proceso con \texttt{ddcolor\_comic}. Repetir con c
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=\textwidth]{./assets/assets/images/captura_hf.jpg}
+  \includegraphics[width=\textwidth]{../assets/images/captura_hf.jpg}
   \caption{Captura de Hugging Face para descargar el modelo.}
   \label{fig:captura_hf}
 \end{figure}
@@ -739,7 +739,7 @@ A continuación se ilustra el proceso con \texttt{ddcolor\_comic}. Repetir con c
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.5\textwidth]{assets/assets/images/captura_explorador.jpg}
+  \includegraphics[width=0.5\textwidth]{../assets/images/captura_explorador.jpg}
   \caption{Captura del explorador de archivos con los pesos correctamente ubicados.}
   \label{fig:captura_explorador}
 \end{figure}
@@ -922,7 +922,35 @@ En los tres casos, el fichero descargado debe renombrarse a \texttt{ddcolor\_com
 
 \section{Conclusiones}
 
-Se debe introducir una sección de conclusiones que incluyan propuestas claras de mejora o extensión del trabajo (por ejemplo, si no se han podido alcanzar todos los objetivos iniciales). También conclusiones sobre los resultados obtenidos, en qué medida difieren de los esperados. Además, son apropiadas conclusiones sobre las desviaciones en cuanto a la planificación inicial de tiempos, así como conclusiones sobre la experiencia de la realización del trabajo (lecciones aprendidas).
+Teniendo en cuenta el ejercicio de experimentación y el trabajo realizado, hemos sacado las siguientes conclusiones como equipo.
+
+\subsection{Resultados obtenidos}
+
+Hablemos en primer lugar de los resultados en base al modelo que nosotros hemos entrenado. Viendo el apartado de ''Experimentación'' podemos concluir lo siguiente: Si bien existe una clara mejoría en la colorización de muchas de las páginas y portadas de cómics coloreadas (en comparación con los modelos ya propuestos originalmente por DDColor), no podemos ni de lejos admitir que se tratan de buenas colorizaciones. Es decir, \textbf{creemos que pocas de las imágenes resultantes podrían engañar a algún humano a la hora de elegir cuál se trata de la verdadera y cuál es la coloreada por nuestro modelo.} Eso no ocurría con las imágenes fotorrealistas de DDColor, que aseguraban ser (y con razón) el ''state-of-art'' de colorización automática. \cite{DDColor}. 
+
+\medskip
+Podríamos pensar que el problema se solucionaría entrenando más y mejor al modelo, con más datos de forma que aprenda más. Pero creemos que el problema es mayor. La arquitectura y la forma en la que está construido DDcolor nos hace dilucidar que no trabaja bien en este dominio porque \textbf{no está preparado para ello}. Las color queries son mucho más complicadas de abstraer cuando nos referimos a cómics.
+
+\medskip
+Una conclusión que sacamos de esto (aunque en cierta medida era imaginable desde el principio), es que el dominio ''no fotorrealista'' es más complejo que el dominio ''fotorrealista'' en tanto y en cuanto hay tantos estilos gráficos como artistas dedicados a ello. Es decir, la realidad es más determinista. Es más concisa, sabes \textit{por donde va a salir}, es más esperable, pues todo sigue una lógica natural. Pero cuando hablamos de ilustraciones humanas, las reglas del juego cambian por completo. Las sombras no tienen porque comportarse de una forma determinada, ni los volúmenes, ni los contornos, ni los colores. Todo queda supeditado a quien sea la persona que lo ha imaginado.
+
+\subsection{Métricas empleadas}
+
+Otra conclusión que se puede ver claramente en el apartado de experimentación es que \textbf{las métricas elegidas no reflejan con exactitud los resultados}. 
+En un primer vistazo parece lógico pensar que Color Difference y Colorfulness Score son métricas que encajan a la perfección con el problema de la colorización. Pero nada más lejos de la realidad, no mide tan bien como nos gustaría. 
+
+Una de las razones es la siguiente: Hay cosas que probablemente tengan un color específico. Es decir, el mar suele ser azul, al igual que el cielo (si no esta atardeciendo o amaneciendo). Las nubes serán por norma general de diferentes tonos de grises, el sol amarillo, la luna gris. El fuego es rojo. 
+Lo que queremos decir es que todos estos elementos pueden llegar a compararse. Y tiene sentido. Si el modelo ha coloreado el sol de color verde, probablemente no encaje con el original (aunque justamente, como el dominio es no-fotorrealista, la fantasía permite que esas cosas puedan ocurrir. Pero vamos a suponer que no es el caso); y por tanto, estaría bien penalizado. 
+
+Sin embargo existen mil tipo de entidades que pueden ser de colores diferentes, pero mantener la lógica. La prenda de un personaje, su camiseta por ejemplo, puede ser roja, verde, azul... y no debería penalizarse el que difiera con el original. Que sea de otro color no indica que esté ''mal'' colorizado. 
+
+Lo que verdaderamente indica una mala colorización son los ruidos de colores que aparecen en los resultados. Esas manchas que se extienden sin aparente sentido, provocado por el funcionamiento de las color queries. Y ese nivel de percepción no es captado por las métricas utilizadas.
+
+\subsection{Objetivos alcanzados}
+
+Una vez visto el resultado general del proyecto nos quedamos con un sentimiento agridulce. Por un lado resulta evidente que los objetivos que pretendíamos alcanzar se han quedado algo por atrás. Si bien hemos intentado poner remedio a la colorización de dominios ''no-fotorrealistas'', no hemos tenido todo el éxito que nos gustaría con el entrenamiento de nuestro modelo. También creemos haber ''menospreciado'' el problema en un principio, y luego ha resultado ser mucho más complejo de lo que nos podíamos imaginar. Razón por la cual no hemos podido analizar la limitación de transparencias.
+
+Sin embargo y pese a todas estas complicaciones nos sentimos profundamente orgulloso del trabajo realizado, ya que el proyecto ha supuesto un proceso de aprendizaje de gran valor académico para cada uno de los integrantes del grupo. Y si bien la implementación ha sido algo frustrada, creemos que los resultados negativos no son un buen indicador de la cantidad de conocimiento adquirido. Así pues estamos muy contentos con la realización de este trabajo, pese a los resultados que se han quedado ''a medias''.
 
 \section{Autoevaluación}
 En esta sección cada integrante del grupo detalla la puntuación para el trabajo que se considera justa en cada apartado de una rúbrica proporcionada por el profesorado. 
