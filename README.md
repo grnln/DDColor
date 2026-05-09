@@ -119,5 +119,68 @@ cv2.imwrite('result.png', result[OutputKeys.OUTPUT_IMG])
 
 Este código descargará automáticamente el modelo ddcolor_modelscope (ver ModelZoo) y realizará la inferencia. El archivo del modelo pytorch_model.pt se puede encontrar en la ruta local ~/.cache/modelscope/hub/damo.
 
+## Aplicación de escritorio: DDColor Lab
+
+DDColor Lab es una interfaz gráfica que permite colorizar imágenes y comparar los resultados de los tres modelos de forma visual y cuantitativa.
+
+### Instalación
+
+Se recomienda usar el entorno Conda del proyecto (ver sección Instalación). Si se prefiere un entorno virtual independiente:
+
+```sh
+python -m venv venv
+source venv/bin/activate   # Linux / macOS
+venv\Scripts\activate      # Windows
+```
+
+Instalar las dependencias de la app:
+
+```sh
+pip install torch torchvision opencv-python pillow scikit-image
+python setup.py develop
+```
+
+### Pesos de los modelos
+
+Colocar los pesos en `./models/` con los siguientes nombres:
+
+| Fichero | Origen | Descarga |
+|---|---|---|
+| `ddcolor_comic.pth` | Fine-tune propio | [Aleparqui/PID_proyect](https://huggingface.co/Aleparqui/PID_proyect) → `net_g_latest.pth` (renombrar) |
+| `ddcolor_realistic.pth` | DDColor oficial | [piddnad/DDColor-models](https://huggingface.co/piddnad/DDColor-models) → `ddcolor_modelscope.pth` (renombrar) |
+| `ddcolor_artistic.pth` | DDColor oficial | [piddnad/DDColor-models](https://huggingface.co/piddnad/DDColor-models) → `ddcolor_artistic.pth` |
+
+Descarga programática:
+
+```python
+from huggingface_hub import hf_hub_download
+
+hf_hub_download(repo_id="Aleparqui/PID_proyect",
+                filename="net_g_latest.pth", local_dir="./models/")
+# Renombrar a ddcolor_comic.pth
+
+hf_hub_download(repo_id="piddnad/DDColor-models",
+                filename="ddcolor_modelscope.pth", local_dir="./models/")
+# Renombrar a ddcolor_realistic.pth
+
+hf_hub_download(repo_id="piddnad/DDColor-models",
+                filename="ddcolor_artistic.pth", local_dir="./models/")
+```
+
+Si algún peso no está disponible, la app opera en **modo DEMO** para ese modelo.
+
+### Uso
+
+```sh
+python ddcolor_desktop.py
+```
+
+1. **Abrir imagen** — formatos admitidos: PNG, JPG, BMP, TIFF, WebP. Se usa automáticamente como ground truth para las métricas.
+2. **Abrir GT (opcional)** — carga una imagen de referencia distinta para las métricas.
+3. **Seleccionar modelos** — activar/desactivar Cómic FT, Realista HF y Artístico HF individualmente.
+4. **▶ Ejecutar** — los resultados aparecen en el panel derecho al finalizar.
+5. **Métricas** — pestaña con tabla comparativa (ΔCF y ΔE₂₀₀₀); el mejor resultado de cada fila se marca con ✓.
+6. **Guardar resultados** — exporta las imágenes colorizadas como `result_comic_ft.png`, `result_realistic_hf.png` y `result_artistic_hf.png`.
+
 ## Más información
 Para acceder a información sobre otros modelos entrenados, como entrenar tu modelo propio, o exportar a ONXX, recomendamos acceder al repositorio original disponible al inicio de este documento.
