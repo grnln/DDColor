@@ -11,6 +11,7 @@
 %% Useful packages
 \usepackage{amsmath}
 \usepackage{graphicx}
+\usepackage{float}
 \usepackage[colorinlistoftodos]{todonotes}
 \usepackage[colorlinks=true, allcolors=blue]{hyperref}
 
@@ -226,7 +227,7 @@ Cabe mencionar que normalmente no basta con una sola métrica para analizar los 
 En este apartado se discutirán las métricas ya utilizadas en el artículo original, y otras nuevas posibles alternativas que encajen mejor para evaluar nuestro modelo concreto. Las separaremos en dos bloques, aquellas que hemos descartado, y las dos que hemos seleccionado, que serán explicadas con más detalle.
 \bigskip
 
-\textbf{En definitiva, discutiremos FID, $\Delta CF$, PSNR (originales), $\Delta E$ , LPIPS y SSIM (nuevas)}
+\textbf{En definitiva, discutiremos FID, $\Delta CF$, PSNR (originales), $\Delta E$ y SSIM (nuevas)}
 
 \subsubsection{Métricas descartadas}
 Se presentan en esta sección aquellas métricas que han sido analizadas, pero descartadas por algún motivo, que será explicado en cada una. No se entrará en el detalle del funcionamiento, pretendiendo poder profundizar plenamente en las que si usaremos.
@@ -660,33 +661,78 @@ La aplicación \textit{DDColor Lab} es una herramienta de escritorio desarrollad
 Para ejecutar la aplicación es necesario tener instaladas las siguientes dependencias:
 
 \begin{itemize}
-  \item \texttt{torch} y \texttt{torchvision}: framework de redes neuronales.
-  \item \texttt{opencv-python}: operaciones de visión por ordenador.
-  \item \texttt{pillow}: lectura y procesamiento de imágenes.
-  \item \texttt{scikit-image}: necesario para el cálculo de la métrica $\Delta E$.
-  \item \texttt{lpips}: necesario para el cálculo de la métrica LPIPS. Opcional; si no está instalado, dicha métrica mostrará \texttt{---}.
-  \item El paquete \texttt{ddcolor} instalado en modo desarrollo (\texttt{python setup.py develop}).
+	\item \texttt{Python}: Version superior o igual a 3.10
+	\item \texttt{PyTorch}: Version superior o igual a 1.7
+	\texttt{torchvision}: framework de redes neuronales.
+	\item \texttt{opencv-python}: operaciones de visión por ordenador.
+	\item \texttt{pillow}: lectura y procesamiento de imágenes.
+	\item \texttt{scikit-image}: necesario para el cálculo de la métrica $\Delta E$.
+	
 \end{itemize}
 
-Además, deben colocarse los pesos de los modelos en el directorio \texttt{./models/} con los siguientes nombres:
+\subsection{Preparación entorno}
+
+\subsubsection{Instalación con conda}
+Antes de la ejecución del programa, será necesario instalar algunos requisitos. Para ello correr los siguientes comandos en consola:
+
+\begin{verbatim}
+	conda create -n ddcolor python=3.9 
+	conda activate ddcolor 
+	pip install torch==2.2.0 torchvision==0.17.0 --index-url https://download.pytorch.org/whl/cu118
+	pip install -r requirements.txt
+\end{verbatim}
+
+
+\subsubsection{Descarga modelos}
+Previo a la ejecución del programa, deben descargarse los pesos de los tres modelos que se evalúan.
+
+Para ello, deben descargarse los archivos desde la plataforma ''HuggingFace'' y colocarse dentro de una carpeta \texttt{./models/} . \textbf{IMPORTANTE: Los archivos que se descarguen y sean tipo .bin deberán renombrarse con extensión .pth. Deben respetarse los nombres ddcolor\_comic.pth, ddcolor\_realistic.pth y ddcolor\_artistic.pth, así como el nombre de la carpeta que los incluye ''models'' que debe estar en la raíz.}
 
 \begin{itemize}
-  \item \texttt{ddcolor\_comic.pth}: modelo fine-tuned sobre imágenes de cómic.
-  \item \texttt{ddcolor\_realistic.pth}: modelo oficial de ModelScope (realista).
-  \item \texttt{ddcolor\_artistic.pth}: modelo artístico de ModelScope.
+	\item \texttt{ddcolor\_comic.pth}: modelo fine-tuned sobre imágenes de cómic. 
+	Enlace: \url{https://huggingface.co/Aleparqui/PID_proyect/blob/main/net_g_latest.pth}
+	\item \texttt{ddcolor\_realistic.pth}: modelo oficial de ModelScope (realista).
+	Enlace: \url{https://huggingface.co/piddnad/ddcolor_modelscope/blob/main/pytorch_model.bin}
+	\item \texttt{ddcolor\_artistic.pth}: modelo artístico de ModelScope.
+	Enlace:\url{
+		https://huggingface.co/piddnad/ddcolor_artistic/blob/main/pytorch_model.bin}
 \end{itemize}
 
-Si alguno de los pesos no está disponible, la aplicación entra automáticamente en \textbf{modo DEMO} para ese modelo, aplicando una colorización sintética de demostración sin necesidad de ejecutar la red neuronal.
+\paragraph{ • Ejemplo descarga ddcolor\_comic} 
+
+(Hacer esto con cada uno de los modelos.)
+
+
+\paragraph{PASO 1:} Entrar en el enlace suministrado, en este caso: \url{https://huggingface.co/Aleparqui/PID_proyect/blob/main/net_g_latest.pth}
+
+\paragraph{PASO 2:} Darle al boton ''Download'' colocado arriba a la izquierda. Ver imágen.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth]{../assets/images/captura_hf.jpg}
+	\caption{Captura sacada de Hugging Face para descargar el modelo}
+	\label{fig:captura_hf}
+\end{figure}
+
+\paragraph{PASO 3:} Renombrar correctamente el archivo y añadirlo dentro de la carpeta DDColor/models.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.5\textwidth]{../assets/images/captura_explorador.jpg}
+	\caption{Captura del explorador de archivos}
+	\label{fig:captura_explorador}
+\end{figure}
 
 \subsection{Puesta en marcha}
 
-Una vez cumplidos los requisitos, la aplicación se lanza ejecutando:
+Una vez cumplidos los requisitos y descargado los tres modelos, la aplicación se lanza ejecutando:
 
 \begin{verbatim}
-python ddcolor_desktop.py
+	python ddcolor_desktop.py
 \end{verbatim}
 
-Al iniciarse, la aplicación carga los modelos en segundo plano e indica su estado en la esquina superior derecha de la ventana (\textit{Listo} en verde si todos los pesos se han cargado correctamente, o en ámbar si alguno opera en modo DEMO).
+\textbf{IMPORTANTE: } Al iniciarse, la aplicación carga los modelos en segundo plano e indica su estado en la esquina superior derecha de la ventana. Esperar a que carguen y que aparezca el mensaje \textit{Listo} en verde.
+
 
 \subsection{Interfaz}
 
@@ -729,7 +775,6 @@ Navegar a la pestaña \textbf{Métricas} para ver la tabla comparativa. Para cad
 \begin{itemize}
   \item $\Delta CF$: diferencia en viveza cromática respecto al ground truth. Valores cercanos a 0 indican que la paleta de color es similar a la referencia.
   \item $\Delta E_{2000}$: error colorimétrico perceptual medio píxel a píxel en el espacio CIELAB. Un valor menor implica mayor fidelidad de color.
-  \item \textit{LPIPS}: similitud perceptual basada en características de red neuronal. Un valor menor indica mayor parecido visual con el ground truth.
 \end{itemize}
 
 \subsubsection{Guardar los resultados}
