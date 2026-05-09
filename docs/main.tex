@@ -656,7 +656,7 @@ Una sección de ejemplos comentados y pruebas realizadas con la implementación 
 
 La aplicación \textit{DDColor Lab} es una herramienta de escritorio desarrollada en Python que permite colorizar imágenes en escala de grises mediante los modelos DDColor y comparar los resultados de forma visual y cuantitativa.
 
-\subsection{Requisitos previos}
+\subsection{Instalación del entorno}
 
 Para ejecutar la aplicación es necesario tener instaladas las siguientes dependencias:
 
@@ -670,69 +670,119 @@ Para ejecutar la aplicación es necesario tener instaladas las siguientes depend
 	
 \end{itemize}
 
-\subsection{Preparación entorno}
+\subsubsection{Creación del entorno}
 
-\subsubsection{Instalación con conda}
-Antes de la ejecución del programa, será necesario instalar algunos requisitos. Para ello correr los siguientes comandos en consola:
+El siguiente comando crea un entorno Conda aislado con Python:
 
 \begin{verbatim}
-	conda create -n ddcolor python=3.9 
-	conda activate ddcolor 
-	pip install torch==2.2.0 torchvision==0.17.0 --index-url https://download.pytorch.org/whl/cu118
-	pip install -r requirements.txt
+conda create -n ddcolor python=3.9
+conda activate ddcolor
 \end{verbatim}
 
+Como alternativa, puede crearse un entorno virtual independiente de Python:
 
-\subsubsection{Descarga modelos}
-Previo a la ejecución del programa, deben descargarse los pesos de los tres modelos que se evalúan.
+\begin{verbatim}
+python -m venv venv
+source venv/bin/activate        # Linux / macOS
+venv\Scripts\activate           # Windows
+\end{verbatim}
 
-Para ello, deben descargarse los archivos desde la plataforma ''HuggingFace'' y colocarse dentro de una carpeta \texttt{./models/} . \textbf{IMPORTANTE: Los archivos que se descarguen y sean tipo .bin deberán renombrarse con extensión .pth. Deben respetarse los nombres ddcolor\_comic.pth, ddcolor\_realistic.pth y ddcolor\_artistic.pth, así como el nombre de la carpeta que los incluye ''models'' que debe estar en la raíz.}
+\subsubsection{Dependencias}
+
+Una vez activado el entorno, se instala PyTorch con soporte para CUDA 11.8. Si no se dispone de GPU compatible, puede omitirse el argumento \texttt{--index-url} y se instalará la versión de CPU:
+
+\begin{verbatim}
+pip install torch==2.2.0 torchvision==0.17.0 \
+    --index-url https://download.pytorch.org/whl/cu118
+\end{verbatim}
+
+Las dependencias necesarias para ejecutar la inferencia se instalan con:
+
+\begin{verbatim}
+pip install -r requirements.txt
+\end{verbatim}
+
+\subsection{Descarga de modelos}
+
+Previo a la ejecución del programa, deben descargarse los pesos de los tres modelos que se evalúan y colocarse dentro de una carpeta \texttt{./models/} en la raíz del proyecto. \textbf{IMPORTANTE: Los archivos descargados de tipo \texttt{.bin} deben renombrarse con extensión \texttt{.pth}. Deben respetarse exactamente los nombres \texttt{ddcolor\_comic.pth}, \texttt{ddcolor\_realistic.pth} y \texttt{ddcolor\_artistic.pth}.}
+
+Los enlaces de descarga directa desde el navegador son:
 
 \begin{itemize}
-	\item \texttt{ddcolor\_comic.pth}: modelo fine-tuned sobre imágenes de cómic. 
-	Enlace: \url{https://huggingface.co/Aleparqui/PID_proyect/blob/main/net_g_latest.pth}
-	\item \texttt{ddcolor\_realistic.pth}: modelo oficial de ModelScope (realista).
-	Enlace: \url{https://huggingface.co/piddnad/ddcolor_modelscope/blob/main/pytorch_model.bin}
-	\item \texttt{ddcolor\_artistic.pth}: modelo artístico de ModelScope.
-	Enlace:\url{
-		https://huggingface.co/piddnad/ddcolor_artistic/blob/main/pytorch_model.bin}
+  \item \texttt{ddcolor\_comic.pth}: modelo fine-tuned sobre imágenes de cómic.\\
+  \url{https://huggingface.co/Aleparqui/PID_proyect/blob/main/net_g_latest.pth}
+
+  \item \texttt{ddcolor\_realistic.pth}: modelo oficial de ModelScope (realista).\\
+  \url{https://huggingface.co/piddnad/ddcolor_modelscope/blob/main/pytorch_model.bin}
+
+  \item \texttt{ddcolor\_artistic.pth}: modelo artístico de ModelScope.\\
+  \url{https://huggingface.co/piddnad/ddcolor_artistic/blob/main/pytorch_model.bin}
 \end{itemize}
 
-\paragraph{ • Ejemplo descarga ddcolor\_comic} 
+\subsubsection{Ejemplo de descarga desde el navegador}
 
-(Hacer esto con cada uno de los modelos.)
+A continuación se ilustra el proceso con \texttt{ddcolor\_comic}. Repetir con cada modelo.
 
+\paragraph{PASO 1:} Acceder al enlace del modelo, en este caso:\\
+\url{https://huggingface.co/Aleparqui/PID_proyect/blob/main/net_g_latest.pth}
 
-\paragraph{PASO 1:} Entrar en el enlace suministrado, en este caso: \url{https://huggingface.co/Aleparqui/PID_proyect/blob/main/net_g_latest.pth}
-
-\paragraph{PASO 2:} Darle al boton ''Download'' colocado arriba a la izquierda. Ver imágen.
-
-\begin{figure}[H]
-	\centering
-	\includegraphics[width=\textwidth]{../assets/images/captura_hf.jpg}
-	\caption{Captura sacada de Hugging Face para descargar el modelo}
-	\label{fig:captura_hf}
-\end{figure}
-
-\paragraph{PASO 3:} Renombrar correctamente el archivo y añadirlo dentro de la carpeta DDColor/models.
+\paragraph{PASO 2:} Pulsar el botón \textit{Download} situado en la parte superior izquierda de la página (ver Figura~\ref{fig:captura_hf}).
 
 \begin{figure}[H]
-	\centering
-	\includegraphics[width=0.5\textwidth]{../assets/images/captura_explorador.jpg}
-	\caption{Captura del explorador de archivos}
-	\label{fig:captura_explorador}
+  \centering
+  \includegraphics[width=\textwidth]{./assets/assets/images/captura_hf.jpg}
+  \caption{Captura de Hugging Face para descargar el modelo.}
+  \label{fig:captura_hf}
 \end{figure}
+
+\paragraph{PASO 3:} Renombrar el archivo correctamente y colocarlo dentro de la carpeta \texttt{DDColor/models} (ver Figura~\ref{fig:captura_explorador}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.5\textwidth]{assets/assets/images/captura_explorador.jpg}
+  \caption{Captura del explorador de archivos con los pesos correctamente ubicados.}
+  \label{fig:captura_explorador}
+\end{figure}
+
+\subsubsection{Descarga programática}
+
+Como alternativa, los tres ficheros pueden descargarse automáticamente con \texttt{huggingface\_hub}:
+
+\begin{verbatim}
+pip install huggingface_hub
+
+from huggingface_hub import hf_hub_download
+
+# Modelo cómic (fine-tune propio)
+hf_hub_download(repo_id="Aleparqui/PID_proyect",
+                filename="net_g_latest.pth",
+                local_dir="./models/")
+# Renombrar a ddcolor_comic.pth
+
+# Modelo realista
+hf_hub_download(repo_id="piddnad/ddcolor_modelscope",
+                filename="pytorch_model.bin",
+                local_dir="./models/")
+# Renombrar a ddcolor_realistic.pth
+
+# Modelo artístico
+hf_hub_download(repo_id="piddnad/ddcolor_artistic",
+                filename="pytorch_model.bin",
+                local_dir="./models/")
+# Renombrar a ddcolor_artistic.pth
+\end{verbatim}
+
+Si alguno de los pesos no está disponible, la aplicación entra automáticamente en \textbf{modo DEMO} para ese modelo, aplicando una colorización sintética sin necesidad de ejecutar la red neuronal.
 
 \subsection{Puesta en marcha}
 
-Una vez cumplidos los requisitos y descargado los tres modelos, la aplicación se lanza ejecutando:
+Una vez cumplidos los requisitos y descargados los tres modelos, la aplicación se lanza ejecutando:
 
 \begin{verbatim}
-	python ddcolor_desktop.py
+python ddcolor_desktop.py
 \end{verbatim}
 
-\textbf{IMPORTANTE: } Al iniciarse, la aplicación carga los modelos en segundo plano e indica su estado en la esquina superior derecha de la ventana. Esperar a que carguen y que aparezca el mensaje \textit{Listo} en verde.
-
+\textbf{IMPORTANTE:} Al iniciarse, la aplicación carga los modelos en segundo plano e indica su estado en la esquina superior derecha de la ventana. Esperar a que carguen y a que aparezca el mensaje \textit{Listo} en verde.
 
 \subsection{Interfaz}
 
@@ -770,7 +820,7 @@ Pulsar el botón \textit{Ejecutar}. La barra de progreso indica que el proceso e
 
 \subsubsection{Consultar las métricas}
 
-Navegar a la pestaña \textbf{Métricas} para ver la tabla comparativa. Para cada métrica, se marca en verde el modelo que obtiene el mejor resultado. Las tres métricas disponibles son:
+Navegar a la pestaña \textbf{Métricas} para ver la tabla comparativa. Para cada métrica, se marca en verde el modelo que obtiene el mejor resultado. Las métricas disponibles son:
 
 \begin{itemize}
   \item $\Delta CF$: diferencia en viveza cromática respecto al ground truth. Valores cercanos a 0 indican que la paleta de color es similar a la referencia.
@@ -791,49 +841,59 @@ Solo se exportan los modelos que estaban activos y produjeron un resultado.
 
 \subsection{Publicación de los pesos en Hugging Face}
 
-Los pesos del modelo fine-tuned se han publicado en el repositorio público de Hugging Face del proyecto:
+Con el objetivo de facilitar la reproducibilidad del trabajo y permitir que cualquier usuario pueda utilizar el modelo fine-tuned sin necesidad de reentrenarlo, los pesos resultantes del entrenamiento se han publicado en Hugging Face, una plataforma ampliamente utilizada en la comunidad de inteligencia artificial para alojar y compartir modelos, datasets y aplicaciones de forma pública y gratuita.
+
+Hugging Face organiza los modelos en repositorios con control de versiones basado en Git, de forma análoga a GitHub pero orientada específicamente a ficheros de gran tamaño como pesos de redes neuronales. Cada repositorio incluye una \textit{Model Card}, un documento en formato Markdown que describe el modelo, su entrenamiento y cómo utilizarlo.
+
+El repositorio del proyecto se encuentra en:
 
 \begin{center}
   \url{https://huggingface.co/Aleparqui/PID_proyect}
 \end{center}
 
-Hugging Face es una plataforma ampliamente utilizada en la comunidad de inteligencia artificial para alojar y compartir modelos, datasets y aplicaciones. Permite almacenar ficheros de pesos de forma gratuita con control de versiones basado en Git, facilitando tanto la descarga programática como la colaboración entre equipos.
+\subsubsection{Contenido del repositorio}
 
-\subsubsection{Estructura del repositorio}
-
-El repositorio está registrado como un modelo de tipo \textit{Image-to-Image} con las etiquetas \texttt{image-colorization}, \texttt{ddcolor} y \texttt{comic-books}. Contiene:
+El repositorio está registrado como modelo de tipo \textit{Image-to-Image} con las etiquetas \texttt{image-colorization}, \texttt{ddcolor} y \texttt{comic-books}, lo que lo hace indexable y localizable dentro de la plataforma. Contiene dos elementos principales:
 
 \begin{itemize}
-  \item El fichero de pesos \texttt{net\_g\_latest.pth}, generado por BasicSR al finalizar el entrenamiento. Almacena el estado del generador en la última iteración completada.
-  \item Una tarjeta de modelo (\textit{Model Card}) en formato Markdown con la descripción completa del modelo: arquitectura base, dataset empleado, hiperparámetros de entrenamiento y ejemplos de inferencia.
+  \item \textbf{Fichero de pesos} \texttt{net\_g\_latest.pth}: generado automáticamente por BasicSR al finalizar el entrenamiento. El nombre \texttt{latest} indica que corresponde al estado del generador en la última iteración completada. Este fichero es el que debe descargarse para usar el modelo en la aplicación o en cualquier script de inferencia.
+
+  \item \textbf{Model Card}: documento en formato Markdown redactado desde la interfaz web de Hugging Face. Recoge la descripción del modelo, el modelo base del que parte (\texttt{piddnad/ddcolor\_modelscope}), el dataset de entrenamiento empleado, los hiperparámetros principales y ejemplos de código para realizar inferencias.
 \end{itemize}
 
 \subsubsection{Proceso de subida}
 
-La subida se realizó mediante la herramienta de línea de comandos \texttt{huggingface\_hub}. Los pasos seguidos fueron los siguientes:
+La subida de los pesos se realizó mediante la herramienta de línea de comandos \texttt{huggingface\_hub}, siguiendo estos pasos:
 
 \begin{enumerate}
-  \item \textbf{Creación de la cuenta y el repositorio} en \url{https://huggingface.co}, seleccionando el tipo \textit{Model} y activando la visibilidad pública.
+  \item \textbf{Creación de la cuenta y el repositorio} en \url{https://huggingface.co}. Al crear el repositorio se seleccionó el tipo \textit{Model} y se activó la visibilidad pública para que cualquier usuario pueda acceder a los pesos sin necesidad de autenticación.
 
-  \item \textbf{Autenticación local} mediante el token de acceso generado en la configuración de la cuenta:
+  \item \textbf{Instalación de la herramienta} en el entorno local:
+  \begin{verbatim}
+  pip install huggingface_hub
+  \end{verbatim}
+
+  \item \textbf{Autenticación local} mediante un token de acceso personal, generado desde los ajustes de la cuenta en la web de Hugging Face (\textit{Settings} $\rightarrow$ \textit{Access Tokens}):
   \begin{verbatim}
   huggingface-cli login
   \end{verbatim}
+  El comando solicita el token por consola y lo almacena localmente para las operaciones posteriores.
 
-  \item \textbf{Subida del fichero de pesos}:
+  \item \textbf{Subida del fichero de pesos} al repositorio:
   \begin{verbatim}
   huggingface-cli upload Aleparqui/PID_proyect \
       ./models/net_g_latest.pth net_g_latest.pth
   \end{verbatim}
+  El primer argumento es el identificador del repositorio en Hugging Face, el segundo es la ruta local del fichero y el tercero es el nombre con el que quedará almacenado en el repositorio.
 
-  \item \textbf{Redacción de la Model Card} directamente desde la interfaz web del repositorio, documentando el modelo base empleado (\texttt{piddnad/ddcolor\_modelscope}), el dataset de entrenamiento, los hiperparámetros principales y las limitaciones conocidas.
+  \item \textbf{Redacción de la Model Card} directamente desde la interfaz web del repositorio, en la pestaña \textit{Model card}.
 \end{enumerate}
 
 \subsubsection{Descarga de los pesos}
 
 Una vez publicados, los pesos pueden descargarse de tres formas:
 
-\paragraph{Opción A — Descarga programática con \texttt{huggingface\_hub} (recomendada):}
+\paragraph{Opción A --- Descarga programática con \texttt{huggingface\_hub} (recomendada):}
 \begin{verbatim}
 from huggingface_hub import hf_hub_download
 
@@ -844,13 +904,13 @@ hf_hub_download(
 )
 \end{verbatim}
 
-\paragraph{Opción B — CLI de Hugging Face:}
+\paragraph{Opción B --- CLI de Hugging Face:}
 \begin{verbatim}
 huggingface-cli download Aleparqui/PID_proyect \
     net_g_latest.pth --local-dir ./models/
 \end{verbatim}
 
-\paragraph{Opción C — Descarga directa desde el navegador:}
+\paragraph{Opción C --- Descarga directa desde el navegador:}
 
 Accediendo a la pestaña \textit{Files and versions} del repositorio o directamente a la URL:
 \begin{verbatim}
@@ -858,7 +918,7 @@ https://huggingface.co/Aleparqui/PID_proyect/
         resolve/main/net_g_latest.pth
 \end{verbatim}
 
-En los tres casos, el fichero descargado debe renombrarse o referenciarse como \texttt{ddcolor\_comic.pth} para que la aplicación \textit{DDColor Lab} lo detecte correctamente, tal como se indica en la sección de manual de usuario.
+En los tres casos, el fichero descargado debe renombrarse a \texttt{ddcolor\_comic.pth} para que la aplicación \textit{DDColor Lab} lo detecte correctamente.
 
 \section{Conclusiones}
 
