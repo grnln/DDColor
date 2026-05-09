@@ -744,6 +744,77 @@ Pulsar el botón \textit{Guardar resultados} para exportar las imágenes coloriz
 
 Solo se exportan los modelos que estaban activos y produjeron un resultado.
 
+\subsection{Publicación de los pesos en Hugging Face}
+
+Los pesos del modelo fine-tuned se han publicado en el repositorio público de Hugging Face del proyecto:
+
+\begin{center}
+  \url{https://huggingface.co/Aleparqui/PID_proyect}
+\end{center}
+
+Hugging Face es una plataforma ampliamente utilizada en la comunidad de inteligencia artificial para alojar y compartir modelos, datasets y aplicaciones. Permite almacenar ficheros de pesos de forma gratuita con control de versiones basado en Git, facilitando tanto la descarga programática como la colaboración entre equipos.
+
+\subsubsection{Estructura del repositorio}
+
+El repositorio está registrado como un modelo de tipo \textit{Image-to-Image} con las etiquetas \texttt{image-colorization}, \texttt{ddcolor} y \texttt{comic-books}. Contiene:
+
+\begin{itemize}
+  \item El fichero de pesos \texttt{net\_g\_latest.pth}, generado por BasicSR al finalizar el entrenamiento. Almacena el estado del generador en la última iteración completada.
+  \item Una tarjeta de modelo (\textit{Model Card}) en formato Markdown con la descripción completa del modelo: arquitectura base, dataset empleado, hiperparámetros de entrenamiento y ejemplos de inferencia.
+\end{itemize}
+
+\subsubsection{Proceso de subida}
+
+La subida se realizó mediante la herramienta de línea de comandos \texttt{huggingface\_hub}. Los pasos seguidos fueron los siguientes:
+
+\begin{enumerate}
+  \item \textbf{Creación de la cuenta y el repositorio} en \url{https://huggingface.co}, seleccionando el tipo \textit{Model} y activando la visibilidad pública.
+
+  \item \textbf{Autenticación local} mediante el token de acceso generado en la configuración de la cuenta:
+  \begin{verbatim}
+  huggingface-cli login
+  \end{verbatim}
+
+  \item \textbf{Subida del fichero de pesos}:
+  \begin{verbatim}
+  huggingface-cli upload Aleparqui/PID_proyect \
+      ./models/net_g_latest.pth net_g_latest.pth
+  \end{verbatim}
+
+  \item \textbf{Redacción de la Model Card} directamente desde la interfaz web del repositorio, documentando el modelo base empleado (\texttt{piddnad/ddcolor\_modelscope}), el dataset de entrenamiento, los hiperparámetros principales y las limitaciones conocidas.
+\end{enumerate}
+
+\subsubsection{Descarga de los pesos}
+
+Una vez publicados, los pesos pueden descargarse de tres formas:
+
+\paragraph{Opción A — Descarga programática con \texttt{huggingface\_hub} (recomendada):}
+\begin{verbatim}
+from huggingface_hub import hf_hub_download
+
+hf_hub_download(
+    repo_id="Aleparqui/PID_proyect",
+    filename="net_g_latest.pth",
+    local_dir="./models/"
+)
+\end{verbatim}
+
+\paragraph{Opción B — CLI de Hugging Face:}
+\begin{verbatim}
+huggingface-cli download Aleparqui/PID_proyect \
+    net_g_latest.pth --local-dir ./models/
+\end{verbatim}
+
+\paragraph{Opción C — Descarga directa desde el navegador:}
+
+Accediendo a la pestaña \textit{Files and versions} del repositorio o directamente a la URL:
+\begin{verbatim}
+https://huggingface.co/Aleparqui/PID_proyect/
+        resolve/main/net_g_latest.pth
+\end{verbatim}
+
+En los tres casos, el fichero descargado debe renombrarse o referenciarse como \texttt{ddcolor\_comic.pth} para que la aplicación \textit{DDColor Lab} lo detecte correctamente, tal como se indica en la sección de manual de usuario.
+
 \section{Conclusiones}
 
 Se debe introducir una sección de conclusiones que incluyan propuestas claras de mejora o extensión del trabajo (por ejemplo, si no se han podido alcanzar todos los objetivos iniciales). También conclusiones sobre los resultados obtenidos, en qué medida difieren de los esperados. Además, son apropiadas conclusiones sobre las desviaciones en cuanto a la planificación inicial de tiempos, así como conclusiones sobre la experiencia de la realización del trabajo (lecciones aprendidas).
