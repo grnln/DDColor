@@ -61,6 +61,41 @@
   url    = {https://www.ibm.com/think/topics/attention-mechanism}
 }
 
+@misc{TorchHook,
+  title = {PyTorch documentation for modules},
+  url   = {https://docs.pytorch.org/docs/2.11/generated/torch.nn.Module.html}
+}
+
+@misc{TorchAvgPool2D,
+  title = {PyTorch documentation for AvgPool2D},
+  url   = {https://docs.pytorch.org/docs/2.11/generated/torch.nn.modules.pooling.AvgPool2d.html}
+}
+
+@misc{TorchBatchNorm2D,
+  title = {PyTorch documentation for BatchNorm2D},
+  url   = {https://docs.pytorch.org/docs/2.11/generated/torch.nn.BatchNorm2d.html}
+}
+
+@misc{CheckerboardArtifacts,
+  title         = {Super-Resolution using Convolutional Neural Networks without Any Checkerboard Artifacts},
+  author        = {Yusuke Sugawara and Sayaka Shiota and Hitoshi Kiya},
+  year          = {2018},
+  eprint        = {1806.02658},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CV},
+  url           = {https://arxiv.org/abs/1806.02658}
+}
+
+@misc{ICNR,
+  title         = {Checkerboard artifact free sub-pixel convolution: A note on sub-pixel convolution, resize convolution and convolution resize},
+  author        = {Andrew Aitken and Christian Ledig and Lucas Theis and Jose Caballero and Zehan Wang and Wenzhe Shi},
+  year          = {2017},
+  eprint        = {1707.02937},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CV},
+  url           = {https://arxiv.org/abs/1707.02937}
+}
+
 @inproceedings{PixelShuffle,
   author    = {Shi, Wenzhe and Caballero, Jose and Huszar, Ferenc and Totz, Johannes and Aitken, Andrew P. and Bishop, Rob and Rueckert, Daniel and Wang, Zehan},
   title     = {Real-Time Single Image and Video Super-Resolution Using an Efficient Sub-Pixel Convolutional Neural Network},
@@ -80,69 +115,70 @@
 }
 
 @article{FID,
-	author       = {Martin Heusel and
-	Hubert Ramsauer and
-	Thomas Unterthiner and
-	Bernhard Nessler and
-	G{\"{u}}nter Klambauer and
-	Sepp Hochreiter},
-	title        = {GANs Trained by a Two Time-Scale Update Rule Converge to a Nash Equilibrium},
-	journal      = {CoRR},
-	volume       = {abs/1706.08500},
-	year         = {2017},
-	url          = {http://arxiv.org/abs/1706.08500},
-	eprinttype   = {arXiv},
-	eprint       = {1706.08500},
-	timestamp    = {Sat, 23 Jan 2021 01:20:58 +0100},
-	biburl       = {https://dblp.org/rec/journals/corr/HeuselRUNKH17.bib},
-	bibsource    = {dblp computer science bibliography, https://dblp.org}
+  author     = {Martin Heusel and
+                Hubert Ramsauer and
+                Thomas Unterthiner and
+                Bernhard Nessler and
+                G{\"{u}}nter Klambauer and
+                Sepp Hochreiter},
+  title      = {GANs Trained by a Two Time-Scale Update Rule Converge to a Nash Equilibrium},
+  journal    = {CoRR},
+  volume     = {abs/1706.08500},
+  year       = {2017},
+  url        = {http://arxiv.org/abs/1706.08500},
+  eprinttype = {arXiv},
+  eprint     = {1706.08500},
+  timestamp  = {Sat, 23 Jan 2021 01:20:58 +0100},
+  biburl     = {https://dblp.org/rec/journals/corr/HeuselRUNKH17.bib},
+  bibsource  = {dblp computer science bibliography, https://dblp.org}
 }
 
 @article{CF,
-	author = {Hasler, David and Suesstrunk, Sabine},
-	year = {2003},
-	month = {06},
-	pages = {87-95},
-	title = {Measuring Colourfulness in Natural Images},
-	volume = {5007},
-	journal = {Proceedings of SPIE - The International Society for Optical Engineering},
-	doi = {10.1117/12.477378}
+  author  = {Hasler, David and Suesstrunk, Sabine},
+  year    = {2003},
+  month   = {06},
+  pages   = {87-95},
+  title   = {Measuring Colourfulness in Natural Images},
+  volume  = {5007},
+  journal = {Proceedings of SPIE - The International Society for Optical Engineering},
+  doi     = {10.1117/12.477378}
 }
 
 @article{PSNR,
-	author = {Huynh-Thu, Q. and Ghanbari, Mohammed},
-	year = {2008},
-	month = {02},
-	pages = {800 - 801},
-	title = {Scope of validity of PSNR in image/video quality assessment},
-	volume = {44},
-	journal = {Electronics Letters},
-	doi = {10.1049/el:20080522}
+  author  = {Huynh-Thu, Q. and Ghanbari, Mohammed},
+  year    = {2008},
+  month   = {02},
+  pages   = {800 - 801},
+  title   = {Scope of validity of PSNR in image/video quality assessment},
+  volume  = {44},
+  journal = {Electronics Letters},
+  doi     = {10.1049/el:20080522}
 }
 
-@ARTICLE{SSIM,
-	author={Zhou Wang and Bovik, A.C. and Sheikh, H.R. and Simoncelli, E.P.},
-	journal={IEEE Transactions on Image Processing}, 
-	title={Image quality assessment: from error visibility to structural similarity}, 
-	year={2004},
-	volume={13},
-	number={4},
-	pages={600-612},
-	keywords={Image quality;Humans;Transform coding;Visual system;Visual perception;Data mining;Layout;Quality assessment;Degradation;Indexes},
-	doi={10.1109/TIP.2003.819861}}
+@article{SSIM,
+  author   = {Zhou Wang and Bovik, A.C. and Sheikh, H.R. and Simoncelli, E.P.},
+  journal  = {IEEE Transactions on Image Processing},
+  title    = {Image quality assessment: from error visibility to structural similarity},
+  year     = {2004},
+  volume   = {13},
+  number   = {4},
+  pages    = {600-612},
+  keywords = {Image quality;Humans;Transform coding;Visual system;Visual perception;Data mining;Layout;Quality assessment;Degradation;Indexes},
+  doi      = {10.1109/TIP.2003.819861}
+}
 
 @article{DeltaE,
-	author = {Sharma, Gaurav and Wu, Wencheng and Dalal, Edul N.},
-	title = {The CIEDE2000 color-difference formula: Implementation notes, supplementary test data, and mathematical observations},
-	journal = {Color Research \& Application},
-	volume = {30},
-	number = {1},
-	pages = {21-30},
-	keywords = {color-difference metrics, CIE, CIELAB, CIE94, CIEDE2000, CMC},
-	doi = {https://doi.org/10.1002/col.20070},
-	url = {https://onlinelibrary.wiley.com/doi/abs/10.1002/col.20070},
-	eprint = {https://onlinelibrary.wiley.com/doi/pdf/10.1002/col.20070},
-	abstract = {Abstract This article and the associated data and programs provided with it are intended to assist color engineers and scientists in correctly implementing the recently developed CIEDE2000 color-difference formula. We indicate several potential implementation errors that are not uncovered in tests performed using the original sample data published with the standard. A supplemental set of data is provided for comprehensive testing of implementations. The test data, Microsoft Excel spreadsheets, and MATLAB scripts for evaluating the CIEDE2000 color difference are made available at the first author's website. Finally, we also point out small mathematical discontinuities in the formula. © 2004 Wiley Periodicals, Inc. Col Res Appl, 30, 21–30, 2005; Published online in Wiley InterScience (www.interscience.wiley.com). DOI 10.1002/col.20070},
-	year = {2005}
+  author   = {Sharma, Gaurav and Wu, Wencheng and Dalal, Edul N.},
+  title    = {The CIEDE2000 color-difference formula: Implementation notes, supplementary test data, and mathematical observations},
+  journal  = {Color Research \& Application},
+  volume   = {30},
+  number   = {1},
+  pages    = {21-30},
+  keywords = {color-difference metrics, CIE, CIELAB, CIE94, CIEDE2000, CMC},
+  doi      = {https://doi.org/10.1002/col.20070},
+  url      = {https://onlinelibrary.wiley.com/doi/abs/10.1002/col.20070},
+  eprint   = {https://onlinelibrary.wiley.com/doi/pdf/10.1002/col.20070},
+  abstract = {Abstract This article and the associated data and programs provided with it are intended to assist color engineers and scientists in correctly implementing the recently developed CIEDE2000 color-difference formula. We indicate several potential implementation errors that are not uncovered in tests performed using the original sample data published with the standard. A supplemental set of data is provided for comprehensive testing of implementations. The test data, Microsoft Excel spreadsheets, and MATLAB scripts for evaluating the CIEDE2000 color difference are made available at the first author's website. Finally, we also point out small mathematical discontinuities in the formula. © 2004 Wiley Periodicals, Inc. Col Res Appl, 30, 21–30, 2005; Published online in Wiley InterScience (www.interscience.wiley.com). DOI 10.1002/col.20070},
+  year     = {2005}
 }
 

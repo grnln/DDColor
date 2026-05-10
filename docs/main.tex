@@ -531,7 +531,7 @@ El código está principalmente contenido en tres directorios del repositorio:
 
 \begin{itemize}
   \item{El directorio \texttt{ddcolor} contiene la implementación de la propia red DDColor.}
-  \item{El directorio \texttt{basicsr} contiene \href{https://github.com/xpixelgroup/basicsr}{BasicSR}, un conjunto de herramientas para la restauración de imagen y vídeo que es empleado por DDColor como \textit{framework} de entrenamiento.}
+  \item{El directorio \texttt{basicsr} contiene \href{https://github.com/xpixelgroup/basicsr}{BasicSR}, un conjunto de herramientas para la restauración de imagen y vídeo que es empleado por DDColor como \textit{framework} de entrenamiento. Este \textit{framework} es extendido por el repositorio, y contiene otra implementación de DDColor con algunas diferencias.}
   \item{El directorio \texttt{scripts} contiene una serie de pequeños scripts, empleados para realizar varias tareas.}
 \end{itemize}
 
@@ -618,7 +618,7 @@ Además, permite ajustar, entre otros, los siguientes parámetros:
   \item{Número de \textit{queries} a refinar en el \textit{colour decoder}.}
 \end{itemize}
 
-La estructura empleada para el \textit{pixel decoder} consiste en una serie de instancias del módulo \texttt{UNetBlockWide} (definido en \texttt{BasicSR}), que a su vez está construido en torno a una versión personalizada de una capa PixelShuffle.
+La estructura empleada para el \textit{pixel decoder} consiste en una serie de instancias del módulo \texttt{UnetBlockWide} (definido en \texttt{BasicSR}), que a su vez está construido en torno a una versión personalizada de una capa PixelShuffle.
 
 Se añade una instancia para cada \textit{hook} añadido al \textit{encoder}, comenzando por el último y exceptuando el primero, y, para el primer hook, una instancia directa de la capa PixelShuffle personalizada.
 
@@ -630,19 +630,210 @@ Tiene, entre otros, los siguientes parámetros configurables:
 
 \begin{itemize}
   \item{Número de \textit{colour queries} a aprender y refinar (por defecto, 100).}
-  \item{Númreo de capas a emplear (número de CDBs a emplear), por defecto 9.}
-  \item{Dimensión intermedia de la \textit{feed-forward network}.}
+  \item{Número de capas a emplear (número de CDBs a emplear), por defecto 9.}
+  \item{Dimensión intermedia de la \textit{feed-forward network} (dimensión de salida de la primera capa, igual a la dimensión de entrada de la capa final).}
 \end{itemize}
 
 Además, este módulo se encarga de inicializar los \textit{embeddings} a emplear para la decodificación.
 
 Aparte de instanciar la arquitectura que se explicó en la sección correspondiente del planteamiento teórico, este módulo instancia también una capa de codificación posicional (\texttt{PositionEmbeddingSine}, definida en \texttt{BasicSR}), la cual se emplea para generar un \textit{embedding} posicional en base a la entrada de la red.
 
+Por último, este módulo realiza al final una normalización de la salida del \textit{decoder} y procesa dicho resultado mediante una red feed-forward sencilla (un MLP, o \textit{Multi-Layer Perceptron}, implementado en \texttt{BasicSR}).
+
 \subsubsection{Pipeline}
+
+Se implementa mediante la clase \texttt{ColorizationPipeline}, la cual admite, entre otros, los siguientes parámetros de entrada:
+
+\begin{itemize}
+  \item{Nombre de la clase de Python que implementa el modelo a emplear.}
+  \item{Ruta del archivo que contiene los pesos del modelo a emplear.}
+  \item{Tamaño de la imagen de entrada (lado), con valor por defecto 512.}
+  \item{Tamaño del modelo, por defecto \texttt{``large''}.}
+  \item{Tipo de \textit{decoder} a emplear, por defecto \texttt{``MultiScaleColorDecoder''}.}
+  \item{Dispositivo en el que efectuar los cálculos (CPU o GPU), opcional y por defecto nulo.}
+\end{itemize}
+
+Al construirse, esta clase configura primero el dispositivo en el que realizar los cálculos (CUDA si hay alguna GPU compatible en el sistema, la CPU en caso contrario).
+
+Posteriormente, escoge el \textit{encoder} y \textit{decoder} a emplear:
+
+\begin{itemize}
+  \item{El \textit{encoder} se escoge en base al tamaño del modelo:
+    \begin{itemize}
+      \item{En caso de que éste sea \texttt{``tiny''}, se empleará una instancia de ConvNeXT-T.}
+      \item{En caso de que adopte el valor \texttt{``large''}, se empleará una instancia de ConvNeXT-L.}
+    \end{itemize}
+  }
+  \item{El \textit{decoder} se escoge en base al parámetro correspondiente, pudiendo ser:
+    \begin{itemize}
+      \item{\texttt{``MultiScaleColorDecoder''}.}
+      \item{\texttt{``SingleColorDecoder''} (implementado en \texttt{BasicSR}). Esta opción solo está disponible en caso de que se emplee la implementación alternativa de DDColor en \texttt{BasicSR}.}
+    \end{itemize}
+  }
+\end{itemize}
+
+Por último, se realiza la instanciación del modelo en sí:
+
+\begin{enumerate}
+  \item{Se crea una instancia de la clase solicitada.}
+  \item{Se carga el diccionario de pesos del modelo desde la ruta especificada.}
+  \item{Se traslada el modelo al dispositivo de cálculo seleccionado.}
+  \item{Se configura el módulo de evaluación del modelo (en lugar del modo de entrenamiento).}
+\end{enumerate}
+
+A la hora de emplear la \textit{pipeline} en sí, se invoca al método \texttt{process}, el cual realiza las siguientes tareas:
+
+\begin{enumerate}
+  \item{Normalización de la imagen de entrada (parámetro de entrada, en BGR como salida de la función \texttt{imread} de OpenCV) al rango [0, 1].}
+  \item{Conversión del espacio de color RGB (en orden BGR) al espacio de color CIELAB.}
+  \item{Reescalado de la imagen al tamaño especificado en la construcción de la \textit{pipeline} (por defecto, 512x512 píxeles).}
+  \item{Conversión de la imagen a escala de grises (manteniendo solo el canal \textit{L} del espacio de color CIELAB, correspondiente a la luminancia).}
+  \item{Conversión de la imagen en escala de grises al espacio de color RGB.}
+  \item{Obtención de los canales \textit{A} y \textit{B} del espacio de color CIELAB (correspondientes a la crominancia), invocando a la red con la imagen en escala de grises en espacio RGB como entrada.}
+  \item{Interpolación de los canales \textit{A} y \textit{B} hasta llegar a la altura y anchura originales de la imagen de entrada.}
+  \item{Concatenación de los canales \textit{L}, \textit{A} y \textit{B} para obtener una imagen a color.}
+  \item{Conversión de la imagen a color al espacio RGB (en orden BGR).}
+  \item{Conversión de la imagen en BGR al rango [0-255].}
+\end{enumerate}
 
 \subsection{BasicSR}
 
-\subsection{Scripts}
+\texttt{BasicSR} es un \textit{framework} que contiene múltiples utilidades empleadas por el modelo DDColor. Además, como parte del repositorio DDColor, se extiende dicho framework incluyendo, entre otros, una implementación del propio DDColor.
+
+Este \textit{framework} está dividido en múltiples módulos:
+
+\begin{itemize}
+  \item{\texttt{archs}: Almacena arquitecturas de modelos (incluyendo una implementación de DDColor), así como útiles para DDColor.}
+  \item{\texttt{data}: Almacena utilidades relacionadas con \textit{datasets}.}
+  \item{\texttt{losses}: Almacena distintas funciones de pérdida, así como utilidades para las mismas.}
+  \item{\texttt{metrics}: Almacena distintas métricas para el análisis de resultados, así como útiles para las mismas.}
+  \item{\texttt{models}: Almacena distintos útiles para la construcción de modelos.}
+  \item{\texttt{utils}: Almacena utilidades varias, con distintos propósitos.}
+\end{itemize}
+
+Al ser un framework extenso que no se emplea en su totalidad en el proyecto, se explicarán a continuación las funcionalidades del mismo empleadas por DDColor, así como las diferencias entre la implementación de DDColor encontrada en el directorio \texttt{ddcolor} y la que forma parte de \texttt{BasicSR}.
+
+\subsubsection{Registro}
+
+Se encuentra dentro del módulo \texttt{utils} de \texttt{BasicSR} (archivo \texttt{registry.py}), e implementa un ``registro'' de módulos.
+
+Esencialmente, se comporta como un diccionario, efectuando un \textit{mapping} de nombres a objetos (siendo dichos objetos módulos).
+
+De esta forma, se pueden añadir módulos externos al registro de \texttt{BasicSR} de tal forma que luego se puedan emplear referenciándolos únicamente por su nombre.
+
+Dentro del mismo archivo, se definen múltiples registros como variables globales:
+
+\begin{itemize}
+  \item{Registro de \textit{datasets}: Almacena \textit{datasets} para el entrenamiento y validación de modelos de inteligencia artificial.}
+  \item{Registro de \textit{arquitecturas}: Empleado para guardar arquitecturas de modelos de inteligencia artificial.}
+  \item{Registro de \textit{modelos}: Almacena modelos de inteligencia artificial.}
+  \item{Registro de \textit{pérdidas}: Almacena funciones de pérdida.}
+  \item{Registro de \textit{métricas}: Almacena funciones para calcular distintas métricas.}
+\end{itemize}
+
+De forma muy sencilla (mediante un decorador de Python), se pueden añadir nuevos módulos a uno de los registros anteriormente mencionados.
+
+En concreto, DDColor registra la arquitectura de la implementación encontrada en \texttt{BasicSR} dentro del registro de arquitecturas.
+
+\subsubsection{Utilidades de arquitectura}
+
+Todas estas utilidades se encuentran en el módulo \texttt{archs}, dentro del directorio \texttt{ddcolor\_arch\_utils}, y son empleadas por la implementación del modelo DDColor.
+
+\paragraph{Hook}
+
+Esta clase permite registrar un \textit{hook} en un módulo de PyTorch \cite{TorchHook}.
+
+Los \textit{hooks} en PyTorch constituyen una forma de alterar el resultado de un módulo de forma externa.
+
+En este caso, sin embargo, su única función es guardar dicho resultado como uno de los miembros de la clase.
+
+De esta manera, estos \textit{hooks} se ``inyectan'' en una determinada capa para poder obtener su resultado y emplearlo para otros propósitos.
+
+Esto se emplea para las \textit{shortcut connections} entre los resultados intermedios del \textit{pixel decoder} y los CDBs del \textit{colour decoder}.
+
+\paragraph{CustomPixelShuffle\_ICNR}
+
+Esta clase implementa un \textit{wrapper} sobre PixelShuffle, creando una capa que permite además quitar artefactos presentes en el resultado según lo estipulado en \cite{CheckerboardArtifacts}.
+
+Así, esta clase primero introduce una capa convolucional ``custom'' (empleando \texttt{custom\_conv\_layer}), inicializando los pesos de la capa mediante ICNR \cite{ICNR}.
+
+El resultado de esta capa es después pasado por una función de activación ReLU, y posteriormente por la capa PixelShuffle en sí.
+
+Posteriormente, se aplica un operador de ``padding'' al resultado (mediante replicación) y se aplica una capa de \textit{pooling} bidimensional \cite{TorchAvgPool2D}, la cual aplica un \textit{blur} a la imagen (reduciendo así los artefactos).
+
+\paragraph{UnetBlockWide}
+
+Esta clase implementa, para un determinado \textit{hook}, un bloque con la siguiente arquitectura:
+
+\begin{enumerate}
+  \item{Capa PixelShuffle ``custom''.}
+  \item{Capa BatchNorm2D \cite{TorchBatchNorm2D} (normalización) sobre el resultado almacenado en el \textit{hook}.}
+  \item{Función de activación ReLU sobre la concatenación de los dos resultados anteriores.}
+  \item{Aplicación de una capa de convolución custom (\texttt{custom\_conv\_layer}) sobre el resultado anterior.}
+\end{enumerate}
+
+\paragraph{custom\_conv\_layer}
+
+Construye una secuencia con la siguiente estructura:
+
+\begin{enumerate}
+  \item{Capa convolucional, con los siguientes parámetros configurables:
+    \begin{itemize}
+      \item{Número de características de entrada.}
+      \item{Número de características de salida.}
+      \item{Tamaño del \textit{kernel}.}
+      \item{Cantidad de \textit{padding}.}
+      \item{Introducción de un \textit{bias}.}
+      \item{``Zancada'' o \textit{stride}.}
+      \item{Unidimensionalidad de la capa (booleano).}
+      \item{En caso de que no sea unidimensional, booleano indicando si trasponer la matriz.}
+    \end{itemize}
+  }
+  \item{\textbf{Opcionalmente}, una capa de activación ReLU.}
+  \item{\textbf{Opcionalmente}, una capa de normalización.}
+  \item{\textbf{Opcionalmente}, una capa de autoatención.}
+\end{enumerate}
+
+\paragraph{ConvNeXt}
+
+Implementación de la arquitectura del modelo ConvNeXT \cite{ConvNeXT} en PyTorch.
+
+\paragraph{SelfAttentionLayer, CrossAttentionLayer, FFNLayer, MLP}
+
+\texttt{SelfAttentionLayer} y \texttt{CrossAttentionLayer} son implementaciones de capas de autoatención y atención cruzada, respectivamente \cite{Attention}.
+
+En cuanto a \texttt{FFNLayer}, éste implementa como módulo de PyTorch la arquitectura explicada en la sección del planteamiento teórico correspondiente a la red feed-forward encontrada al final de los CDBs.
+
+\texttt{MLP}, por su parte, implementa la siguiente arquitectura:
+
+\begin{itemize}
+  \item{Número configurable de capas lineales, donde:
+    \begin{itemize}
+      \item{La dimensión de entrada de la primera capa es un parámetro configurable $n_i$.}
+      \item{La dimensión de entrada de la primera capa es otro parámetro configurable $n_o$.}
+      \item{El resto de dimensiones (incluyendo las dimensiones de todas las capas escondidas) es otro parámetro configurable $n_h$.}
+    \end{itemize}
+  }
+  \item{Tras cada capa lineal, se aplica una función de activación ReLU.}
+\end{itemize}
+
+\paragraph{PositionEmbeddingSine}
+
+Este módulo implementa una versión modificada de la función de generación de \textit{embeddings} posicionales empleada en \cite{Attention}.
+
+% TODO: Fórmula
+
+\paragraph{Transformer}
+
+Como se indica al principio de la clase en un comentario, esta es una versión ligeramente modificada de la implementación de la arquitectura de \textit{transformers} de PyTorch.
+
+Se emplea en la implementación de DDColor de \texttt{BasicSR}, para el \texttt{SingleColorDecoder}.
+
+% TODO: Cambios
+
+\subsubsection{Entrenamiento}
+
+% TODO
 
 \subsection{Contribución propia}
 
