@@ -11,6 +11,7 @@
 %% Useful packages
 \usepackage{amsmath}
 \usepackage{graphicx}
+\usepackage{float}
 \usepackage[colorinlistoftodos]{todonotes}
 \usepackage[colorlinks=true, allcolors=blue]{hyperref}
 
@@ -226,7 +227,7 @@ Cabe mencionar que normalmente no basta con una sola métrica para analizar los 
 En este apartado se discutirán las métricas ya utilizadas en el artículo original, y otras nuevas posibles alternativas que encajen mejor para evaluar nuestro modelo concreto. Las separaremos en dos bloques, aquellas que hemos descartado, y las dos que hemos seleccionado, que serán explicadas con más detalle.
 \bigskip
 
-\textbf{En definitiva, discutiremos FID, $\Delta CF$, PSNR (originales), $\Delta E$ , LPIPS y SSIM (nuevas)}
+\textbf{En definitiva, discutiremos FID, $\Delta CF$, PSNR (originales), $\Delta E$ y SSIM (nuevas)}
 
 \subsubsection{Métricas descartadas}
 Se presentan en esta sección aquellas métricas que han sido analizadas, pero descartadas por algún motivo, que será explicado en cada una. No se entrará en el detalle del funcionamiento, pretendiendo poder profundizar plenamente en las que si usaremos.
@@ -839,45 +840,152 @@ Se emplea en la implementación de DDColor de \texttt{BasicSR}, para el \texttt{
 
 \section{Experimentación}
 
-Una sección de ejemplos comentados y pruebas realizadas con la implementación desarrollada es {\textit imprescindible} en este trabajo. Si existen distintos parámetros que intervienen en el método, se deben comprender y experimentar con ellos. También puede ser de interés probar distintos tipos de imágenes dentro del contexto del trabajo. Igualmente importantes (o más) serán las conclusiones que se puedan obtener de la experimentación realizada. 
+En este sección se verán los resultados realizados sobre la colorización de un total de 10 imágenes distintas, referidas al dominio no fotorrealista. Cada imagen ha sido coloreada usando, no solo nuestro modelo, sino tambien el modelo DDColor ''modelscope'' que es el que usan en el paper, asi como DDColor ``artistic``, un modelo que fue entrenado con datasets de arte (pero referido a pintura). 
 
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth]{../assets/images/composicion2.jpg}
+	\caption{Comparacion imagenes con distintos modelos}
+	\label{fig:comparacion2}
+\end{figure}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth]{../assets/images/composicion.jpg}
+	\caption{Comparacion imagenes con distintos modelos}
+	\label{fig:comparacion1}
+\end{figure}
 
 \section{Manual de usuario}
 
 La aplicación \textit{DDColor Lab} es una herramienta de escritorio desarrollada en Python que permite colorizar imágenes en escala de grises mediante los modelos DDColor y comparar los resultados de forma visual y cuantitativa.
 
-\subsection{Requisitos previos}
+\subsection{Instalación del entorno}
 
 Para ejecutar la aplicación es necesario tener instaladas las siguientes dependencias:
 
 \begin{itemize}
-  \item \texttt{torch} y \texttt{torchvision}: framework de redes neuronales.
-  \item \texttt{opencv-python}: operaciones de visión por ordenador.
-  \item \texttt{pillow}: lectura y procesamiento de imágenes.
-  \item \texttt{scikit-image}: necesario para el cálculo de la métrica $\Delta E$.
-  \item \texttt{lpips}: necesario para el cálculo de la métrica LPIPS. Opcional; si no está instalado, dicha métrica mostrará \texttt{---}.
-  \item El paquete \texttt{ddcolor} instalado en modo desarrollo (\texttt{python setup.py develop}).
+	\item \texttt{Python}: Version superior o igual a 3.10
+	\item \texttt{PyTorch}: Version superior o igual a 1.7
+	\texttt{torchvision}: framework de redes neuronales.
+	\item \texttt{opencv-python}: operaciones de visión por ordenador.
+	\item \texttt{pillow}: lectura y procesamiento de imágenes.
+	\item \texttt{scikit-image}: necesario para el cálculo de la métrica $\Delta E$.
+	
 \end{itemize}
 
-Además, deben colocarse los pesos de los modelos en el directorio \texttt{./models/} con los siguientes nombres:
+\subsubsection{Creación del entorno}
+
+El siguiente comando crea un entorno Conda aislado con Python:
+
+\begin{verbatim}
+conda create -n ddcolor python=3.9
+conda activate ddcolor
+\end{verbatim}
+
+Como alternativa, puede crearse un entorno virtual independiente de Python:
+
+\begin{verbatim}
+python -m venv venv
+source venv/bin/activate        # Linux / macOS
+venv\Scripts\activate           # Windows
+\end{verbatim}
+
+\subsubsection{Dependencias}
+
+Una vez activado el entorno, se instala PyTorch con soporte para CUDA 11.8. Si no se dispone de GPU compatible, puede omitirse el argumento \texttt{--index-url} y se instalará la versión de CPU:
+
+\begin{verbatim}
+pip install torch==2.2.0 torchvision==0.17.0 \
+    --index-url https://download.pytorch.org/whl/cu118
+\end{verbatim}
+
+Las dependencias necesarias para ejecutar la inferencia se instalan con:
+
+\begin{verbatim}
+pip install -r requirements.txt
+\end{verbatim}
+
+\subsection{Descarga de modelos}
+
+Previo a la ejecución del programa, deben descargarse los pesos de los tres modelos que se evalúan y colocarse dentro de una carpeta \texttt{./models/} en la raíz del proyecto. \textbf{IMPORTANTE: Los archivos descargados de tipo \texttt{.bin} deben renombrarse con extensión \texttt{.pth}. Deben respetarse exactamente los nombres \texttt{ddcolor\_comic.pth}, \texttt{ddcolor\_realistic.pth} y \texttt{ddcolor\_artistic.pth}.}
+
+Los enlaces de descarga directa desde el navegador son:
 
 \begin{itemize}
-  \item \texttt{ddcolor\_comic.pth}: modelo fine-tuned sobre imágenes de cómic.
-  \item \texttt{ddcolor\_realistic.pth}: modelo oficial de ModelScope (realista).
-  \item \texttt{ddcolor\_artistic.pth}: modelo artístico de ModelScope.
+  \item \texttt{ddcolor\_comic.pth}: modelo fine-tuned sobre imágenes de cómic.\\
+  \url{https://huggingface.co/Aleparqui/PID_proyect/blob/main/net_g_latest.pth}
+
+  \item \texttt{ddcolor\_realistic.pth}: modelo oficial de ModelScope (realista).\\
+  \url{https://huggingface.co/piddnad/ddcolor_modelscope/blob/main/pytorch_model.bin}
+
+  \item \texttt{ddcolor\_artistic.pth}: modelo artístico de ModelScope.\\
+  \url{https://huggingface.co/piddnad/ddcolor_artistic/blob/main/pytorch_model.bin}
 \end{itemize}
 
-Si alguno de los pesos no está disponible, la aplicación entra automáticamente en \textbf{modo DEMO} para ese modelo, aplicando una colorización sintética de demostración sin necesidad de ejecutar la red neuronal.
+\subsubsection{Ejemplo de descarga desde el navegador}
+
+A continuación se ilustra el proceso con \texttt{ddcolor\_comic}. Repetir con cada modelo.
+
+\paragraph{PASO 1:} Acceder al enlace del modelo, en este caso:\\
+\url{https://huggingface.co/Aleparqui/PID_proyect/blob/main/net_g_latest.pth}
+
+\paragraph{PASO 2:} Pulsar el botón \textit{Download} situado en la parte superior izquierda de la página (ver Figura~\ref{fig:captura_hf}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{../assets/images/captura_hf.jpg}
+  \caption{Captura de Hugging Face para descargar el modelo.}
+  \label{fig:captura_hf}
+\end{figure}
+
+\paragraph{PASO 3:} Renombrar el archivo correctamente y colocarlo dentro de la carpeta \texttt{DDColor/models} (ver Figura~\ref{fig:captura_explorador}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.5\textwidth]{../assets/images/captura_explorador.jpg}
+  \caption{Captura del explorador de archivos con los pesos correctamente ubicados.}
+  \label{fig:captura_explorador}
+\end{figure}
+
+\subsubsection{Descarga programática}
+
+Como alternativa, los tres ficheros pueden descargarse automáticamente con \texttt{huggingface\_hub}:
+
+\begin{verbatim}
+pip install huggingface_hub
+
+from huggingface_hub import hf_hub_download
+
+# Modelo cómic (fine-tune propio)
+hf_hub_download(repo_id="Aleparqui/PID_proyect",
+                filename="net_g_latest.pth",
+                local_dir="./models/")
+# Renombrar a ddcolor_comic.pth
+
+# Modelo realista
+hf_hub_download(repo_id="piddnad/ddcolor_modelscope",
+                filename="pytorch_model.bin",
+                local_dir="./models/")
+# Renombrar a ddcolor_realistic.pth
+
+# Modelo artístico
+hf_hub_download(repo_id="piddnad/ddcolor_artistic",
+                filename="pytorch_model.bin",
+                local_dir="./models/")
+# Renombrar a ddcolor_artistic.pth
+\end{verbatim}
+
+Si alguno de los pesos no está disponible, la aplicación entra automáticamente en \textbf{modo DEMO} para ese modelo, aplicando una colorización sintética sin necesidad de ejecutar la red neuronal.
 
 \subsection{Puesta en marcha}
 
-Una vez cumplidos los requisitos, la aplicación se lanza ejecutando:
+Una vez cumplidos los requisitos y descargados los tres modelos, la aplicación se lanza ejecutando:
 
 \begin{verbatim}
 python ddcolor_desktop.py
 \end{verbatim}
 
-Al iniciarse, la aplicación carga los modelos en segundo plano e indica su estado en la esquina superior derecha de la ventana (\textit{Listo} en verde si todos los pesos se han cargado correctamente, o en ámbar si alguno opera en modo DEMO).
+\textbf{IMPORTANTE:} Al iniciarse, la aplicación carga los modelos en segundo plano e indica su estado en la esquina superior derecha de la ventana. Esperar a que carguen y a que aparezca el mensaje \textit{Listo} en verde.
 
 \subsection{Interfaz}
 
@@ -915,12 +1023,11 @@ Pulsar el botón \textit{Ejecutar}. La barra de progreso indica que el proceso e
 
 \subsubsection{Consultar las métricas}
 
-Navegar a la pestaña \textbf{Métricas} para ver la tabla comparativa. Para cada métrica, se marca en verde el modelo que obtiene el mejor resultado. Las tres métricas disponibles son:
+Navegar a la pestaña \textbf{Métricas} para ver la tabla comparativa. Para cada métrica, se marca en verde el modelo que obtiene el mejor resultado. Las métricas disponibles son:
 
 \begin{itemize}
   \item $\Delta CF$: diferencia en viveza cromática respecto al ground truth. Valores cercanos a 0 indican que la paleta de color es similar a la referencia.
   \item $\Delta E_{2000}$: error colorimétrico perceptual medio píxel a píxel en el espacio CIELAB. Un valor menor implica mayor fidelidad de color.
-  \item \textit{LPIPS}: similitud perceptual basada en características de red neuronal. Un valor menor indica mayor parecido visual con el ground truth.
 \end{itemize}
 
 \subsubsection{Guardar los resultados}
@@ -935,13 +1042,148 @@ Pulsar el botón \textit{Guardar resultados} para exportar las imágenes coloriz
 
 Solo se exportan los modelos que estaban activos y produjeron un resultado.
 
+\subsection{Publicación de los pesos en Hugging Face}
+
+Con el objetivo de facilitar la reproducibilidad del trabajo y permitir que cualquier usuario pueda utilizar el modelo fine-tuned sin necesidad de reentrenarlo, los pesos resultantes del entrenamiento se han publicado en Hugging Face, una plataforma ampliamente utilizada en la comunidad de inteligencia artificial para alojar y compartir modelos, datasets y aplicaciones de forma pública y gratuita.
+
+Hugging Face organiza los modelos en repositorios con control de versiones basado en Git, de forma análoga a GitHub pero orientada específicamente a ficheros de gran tamaño como pesos de redes neuronales. Cada repositorio incluye una \textit{Model Card}, un documento en formato Markdown que describe el modelo, su entrenamiento y cómo utilizarlo.
+
+El repositorio del proyecto se encuentra en:
+
+\begin{center}
+  \url{https://huggingface.co/Aleparqui/PID_proyect}
+\end{center}
+
+\subsubsection{Contenido del repositorio}
+
+El repositorio está registrado como modelo de tipo \textit{Image-to-Image} con las etiquetas \texttt{image-colorization}, \texttt{ddcolor} y \texttt{comic-books}, lo que lo hace indexable y localizable dentro de la plataforma. Contiene dos elementos principales:
+
+\begin{itemize}
+  \item \textbf{Fichero de pesos} \texttt{net\_g\_latest.pth}: generado automáticamente por BasicSR al finalizar el entrenamiento. El nombre \texttt{latest} indica que corresponde al estado del generador en la última iteración completada. Este fichero es el que debe descargarse para usar el modelo en la aplicación o en cualquier script de inferencia.
+
+  \item \textbf{Model Card}: documento en formato Markdown redactado desde la interfaz web de Hugging Face. Recoge la descripción del modelo, el modelo base del que parte (\texttt{piddnad/ddcolor\_modelscope}), el dataset de entrenamiento empleado, los hiperparámetros principales y ejemplos de código para realizar inferencias.
+\end{itemize}
+
+\subsubsection{Proceso de subida}
+
+La subida de los pesos se realizó mediante la herramienta de línea de comandos \texttt{huggingface\_hub}, siguiendo estos pasos:
+
+\begin{enumerate}
+  \item \textbf{Creación de la cuenta y el repositorio} en \url{https://huggingface.co}. Al crear el repositorio se seleccionó el tipo \textit{Model} y se activó la visibilidad pública para que cualquier usuario pueda acceder a los pesos sin necesidad de autenticación.
+
+  \item \textbf{Instalación de la herramienta} en el entorno local:
+  \begin{verbatim}
+  pip install huggingface_hub
+  \end{verbatim}
+
+  \item \textbf{Autenticación local} mediante un token de acceso personal, generado desde los ajustes de la cuenta en la web de Hugging Face (\textit{Settings} $\rightarrow$ \textit{Access Tokens}):
+  \begin{verbatim}
+  huggingface-cli login
+  \end{verbatim}
+  El comando solicita el token por consola y lo almacena localmente para las operaciones posteriores.
+
+  \item \textbf{Subida del fichero de pesos} al repositorio:
+  \begin{verbatim}
+  huggingface-cli upload Aleparqui/PID_proyect \
+      ./models/net_g_latest.pth net_g_latest.pth
+  \end{verbatim}
+  El primer argumento es el identificador del repositorio en Hugging Face, el segundo es la ruta local del fichero y el tercero es el nombre con el que quedará almacenado en el repositorio.
+
+  \item \textbf{Redacción de la Model Card} directamente desde la interfaz web del repositorio, en la pestaña \textit{Model card}.
+\end{enumerate}
+
+\subsubsection{Descarga de los pesos}
+
+Una vez publicados, los pesos pueden descargarse de tres formas:
+
+\paragraph{Opción A --- Descarga programática con \texttt{huggingface\_hub} (recomendada):}
+\begin{verbatim}
+from huggingface_hub import hf_hub_download
+
+hf_hub_download(
+    repo_id="Aleparqui/PID_proyect",
+    filename="net_g_latest.pth",
+    local_dir="./models/"
+)
+\end{verbatim}
+
+\paragraph{Opción B --- CLI de Hugging Face:}
+\begin{verbatim}
+huggingface-cli download Aleparqui/PID_proyect \
+    net_g_latest.pth --local-dir ./models/
+\end{verbatim}
+
+\paragraph{Opción C --- Descarga directa desde el navegador:}
+
+Accediendo a la pestaña \textit{Files and versions} del repositorio o directamente a la URL:
+\begin{verbatim}
+https://huggingface.co/Aleparqui/PID_proyect/
+        resolve/main/net_g_latest.pth
+\end{verbatim}
+
+En los tres casos, el fichero descargado debe renombrarse a \texttt{ddcolor\_comic.pth} para que la aplicación \textit{DDColor Lab} lo detecte correctamente.
+
 \section{Conclusiones}
 
-Se debe introducir una sección de conclusiones que incluyan propuestas claras de mejora o extensión del trabajo (por ejemplo, si no se han podido alcanzar todos los objetivos iniciales). También conclusiones sobre los resultados obtenidos, en qué medida difieren de los esperados. Además, son apropiadas conclusiones sobre las desviaciones en cuanto a la planificación inicial de tiempos, así como conclusiones sobre la experiencia de la realización del trabajo (lecciones aprendidas).
+Teniendo en cuenta el ejercicio de experimentación y el trabajo realizado, hemos sacado las siguientes conclusiones como equipo.
+
+\subsection{Resultados obtenidos}
+
+Hablemos en primer lugar de los resultados en base al modelo que nosotros hemos entrenado. Viendo el apartado de ''Experimentación'' podemos concluir lo siguiente: Si bien existe una clara mejoría en la colorización de muchas de las páginas y portadas de cómics coloreadas (en comparación con los modelos ya propuestos originalmente por DDColor), no podemos ni de lejos admitir que se tratan de buenas colorizaciones. Es decir, \textbf{creemos que pocas de las imágenes resultantes podrían engañar a algún humano a la hora de elegir cuál se trata de la verdadera y cuál es la coloreada por nuestro modelo.} Eso no ocurría con las imágenes fotorrealistas de DDColor, que aseguraban ser (y con razón) el ''state-of-art'' de colorización automática. \cite{DDColor}. 
+
+\medskip
+Podríamos pensar que el problema se solucionaría entrenando más y mejor al modelo, con más datos de forma que aprenda más. Pero creemos que el problema es mayor. La arquitectura y la forma en la que está construido DDcolor nos hace dilucidar que no trabaja bien en este dominio porque \textbf{no está preparado para ello}. Las color queries son mucho más complicadas de abstraer cuando nos referimos a cómics.
+
+\medskip
+Una conclusión que sacamos de esto (aunque en cierta medida era imaginable desde el principio), es que el dominio ''no fotorrealista'' es más complejo que el dominio ''fotorrealista'' en tanto y en cuanto hay tantos estilos gráficos como artistas dedicados a ello. Es decir, la realidad es más determinista. Es más concisa, sabes \textit{por donde va a salir}, es más esperable, pues todo sigue una lógica natural. Pero cuando hablamos de ilustraciones humanas, las reglas del juego cambian por completo. Las sombras no tienen porque comportarse de una forma determinada, ni los volúmenes, ni los contornos, ni los colores. Todo queda supeditado a quien sea la persona que lo ha imaginado.
+
+\subsection{Métricas empleadas}
+
+Otra conclusión que se puede ver claramente en el apartado de experimentación es que \textbf{las métricas elegidas no reflejan con exactitud los resultados}. 
+En un primer vistazo parece lógico pensar que Color Difference y Colorfulness Score son métricas que encajan a la perfección con el problema de la colorización. Pero nada más lejos de la realidad, no mide tan bien como nos gustaría. 
+
+Una de las razones es la siguiente: Hay cosas que probablemente tengan un color específico. Es decir, el mar suele ser azul, al igual que el cielo (si no esta atardeciendo o amaneciendo). Las nubes serán por norma general de diferentes tonos de grises, el sol amarillo, la luna gris. El fuego es rojo. 
+Lo que queremos decir es que todos estos elementos pueden llegar a compararse. Y tiene sentido. Si el modelo ha coloreado el sol de color verde, probablemente no encaje con el original (aunque justamente, como el dominio es no-fotorrealista, la fantasía permite que esas cosas puedan ocurrir. Pero vamos a suponer que no es el caso); y por tanto, estaría bien penalizado. 
+
+Sin embargo existen mil tipo de entidades que pueden ser de colores diferentes, pero mantener la lógica. La prenda de un personaje, su camiseta por ejemplo, puede ser roja, verde, azul... y no debería penalizarse el que difiera con el original. Que sea de otro color no indica que esté ''mal'' colorizado. 
+
+Lo que verdaderamente indica una mala colorización son los ruidos de colores que aparecen en los resultados. Esas manchas que se extienden sin aparente sentido, provocado por el funcionamiento de las color queries. Y ese nivel de percepción no es captado por las métricas utilizadas.
+
+\subsection{Objetivos alcanzados}
+
+Una vez visto el resultado general del proyecto nos quedamos con un sentimiento agridulce. Por un lado resulta evidente que los objetivos que pretendíamos alcanzar se han quedado algo por atrás. Si bien hemos intentado poner remedio a la colorización de dominios ''no-fotorrealistas'', no hemos tenido todo el éxito que nos gustaría con el entrenamiento de nuestro modelo. También creemos haber ''menospreciado'' el problema en un principio, y luego ha resultado ser mucho más complejo de lo que nos podíamos imaginar. Razón por la cual no hemos podido analizar la limitación de transparencias.
+
+Sin embargo y pese a todas estas complicaciones nos sentimos profundamente orgulloso del trabajo realizado, ya que el proyecto ha supuesto un proceso de aprendizaje de gran valor académico para cada uno de los integrantes del grupo. Y si bien la implementación ha sido algo frustrada, creemos que los resultados negativos no son un buen indicador de la cantidad de conocimiento adquirido. Así pues estamos muy contentos con la realización de este trabajo, pese a los resultados que se han quedado ''a medias''.
 
 \section{Autoevaluación}
+En esta sección cada integrante del grupo detalla la puntuación para el trabajo que se considera justa en cada apartado de una rúbrica proporcionada por el profesorado. 
 
-Siguiendo la rúbrica dada, se debe detallar, por parte de  \textbf{cada miembro del grupo}, la puntuación para el trabajo que se considera justa en cada apartado. 
+\subsection{José Carlos Mora López}
+
+\begin{table}[h!]
+	\centering
+	\begin{tabular}{|l|l|}
+		\hline
+		\textbf{CRITERIO} & \textbf{PUNTUACIÓN} \\ \hline
+		
+		\multicolumn{2}{|l|}{\textbf{Exposición}} \\ \hline
+		Comprensión y dominio (puntúa triple) & No procede \\ \hline
+		Exposición didáctica & No procede \\ \hline
+		Integración del equipo & No procede \\ \hline
+		
+		\multicolumn{2}{|l|}{\textbf{Implementación}} \\ \hline
+		Objetivos (puntúa doble) & REGULAR \\ \hline
+		Aspectos didácticos & EXCELENTE \\ \hline
+		Experimentación y conclusiones & BIEN \\ \hline
+		
+		\multicolumn{2}{|l|}{\textbf{Documentación}} \\ \hline
+		Contenidos & BIEN \\ \hline
+		Divulgación de los contenidos & BIEN \\ \hline
+		Bibliografía. Recursos científicos & EXCELENTE \\ \hline
+		
+	\end{tabular}
+\end{table}
+
 
 \section{Tabla de tiempos}
 
