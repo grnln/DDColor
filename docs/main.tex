@@ -4,6 +4,7 @@
 \usepackage[spanish]{babel}
 \usepackage[utf8x]{inputenc}
 \usepackage[T1]{fontenc}
+\usepackage{float}
 
 %% Sets page size and margins
 \usepackage[a4paper,top=3cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=2cm]{geometry}
@@ -11,7 +12,6 @@
 %% Useful packages
 \usepackage{amsmath}
 \usepackage{graphicx}
-\usepackage{float}
 \usepackage[colorinlistoftodos]{todonotes}
 \usepackage[colorlinks=true, allcolors=blue]{hyperref}
 
@@ -142,7 +142,7 @@ Cada capa \textit{PixelShuffle} contiene una secuencia de \textit{L} capas convo
 
 \subsubsection{Colour decoder}
 
-Este decodificador emplea una arquitectura basada en la arquitectura de un transformer, es decir, empleando mecanismos de atención, para refinar \textit{colour queries}.
+Este decodificador emplea una arquitectura basada en la arquitectura de un \textit{transformer}, es decir, empleando mecanismos de atención, para refinar \textit{colour queries}.
 
 Dichas \textit{colour queries} son embeddings que indican el color de las distintas características de la imagen.
 
@@ -159,9 +159,9 @@ La \textit{colour query} inicial (la empleada como entrada del primer CDB de la 
 
 Antes de proceder con las operaciones realizadas dentro de cada CDB, se explicarán brevemente los mecanismos de atención empleados.
 
-\paragraph{Mecanismos de atención}
+\paragraph{Mecanismos de atención y transformers}
 
-Tienen tres características principales \cite{IBMAttention}:
+Los mecanismos de atención tienen tres características principales \cite{IBMAttention}:
 
 \begin{enumerate}
   \item{Leen \textbf{secuencias de datos} y las transforman en \textit{embeddings} vectoriales.}
@@ -192,10 +192,34 @@ En el contexto de DDColor, se emplean dos tipos de atención:
 
 \begin{itemize}
   \item{\textbf{Atención cruzada}: Las \textit{queries} y las \textit{keys} provienen de fuentes distintas.}
-  \item{\textbf{Autoatención}: Las \textit{queries} y las \textit{keys} proceden de la misma fuente.}
+  \item{\textbf{Autoatención}: Las \textit{queries} y las \textit{keys} proceden de la misma fuente. En DDColor, se emplea la \textit{multi-head attention}, en la que cada dimensión de la entrada se procesa por separado \cite{Attention}.}
 \end{itemize}
 
-Las operaciones realizadas en cada CDB son las siguientes:
+Los mecanismos de atención son la base de los transformers, definidos en \cite{Attention}.
+
+Éstos siguen también un patrón \textit{encoder-decoder}:
+
+\begin{itemize}
+  \item{El \textit{encoder} consta de 6 capas, cada una con la siguiente arquitectura \cite{Attention}:
+    \begin{enumerate}
+      \item{Capa de \textit{multi-head attention}.}
+      \item{Red feed-forward.}
+    \end{enumerate}
+    Cada capa cuenta con una conexión residual, es decir, al resultado de cada capa se le suma el de la anterior y se normaliza.
+  }
+  \item{El \textit{decoder} también consta de 6 capas, cada una con la siguiente arquitectura \cite{Attention}:
+    \begin{enumerate}
+      \item{Capa de \textit{multi-head attention}.}
+      \item{Capa de \textit{multi-head attention} aplicada al resultado del \textit{encoder}.}
+      \item{Red feed-forward.}
+    \end{enumerate}
+    Cada capa cuenta con una conexión residual de la misma forma que en el \textit{encoder}.
+  }
+\end{itemize}
+
+Posteriormente, el resultado del \textit{decoder} se procesa mediante una capa lineal y una función de activación softmax \cite{Softmax}.
+
+Así, las operaciones realizadas en cada CDB son las siguientes:
 
 \begin{enumerate}
   \item{\textbf{Capa de atención cruzada} empleando el mapa de características como \textit{key} y \textit{value} y con la colour query como \textit{query}.}
@@ -234,7 +258,7 @@ Cabe mencionar que normalmente no basta con una sola métrica para analizar los 
 En este apartado se discutirán las métricas ya utilizadas en el artículo original, y otras nuevas posibles alternativas que encajen mejor para evaluar nuestro modelo concreto. Las separaremos en dos bloques, aquellas que hemos descartado, y las dos que hemos seleccionado, que serán explicadas con más detalle.
 \bigskip
 
-\textbf{En definitiva, discutiremos FID, $\Delta CF$, PSNR (originales), $\Delta E$ y SSIM (nuevas)}
+\textbf{En definitiva, discutiremos FID, $\Delta CF$, PSNR (originales), $\Delta E$ , LPIPS y SSIM (nuevas)}
 
 \subsubsection{Métricas descartadas}
 Se presentan en esta sección aquellas métricas que han sido analizadas, pero descartadas por algún motivo, que será explicado en cada una. No se entrará en el detalle del funcionamiento, pretendiendo poder profundizar plenamente en las que si usaremos.
@@ -523,6 +547,7 @@ Asimismo, se emplean otras librerías en el proyecto:
   \item{\href{https://pillow.readthedocs.io/en/stable/}{Pillow}: Implementa operaciones de lectura y procesamiento de imágenes.}
   \item{\href{https://tqdm.github.io/}{tqdm}: Implementa barras de progreso para aplicaciones de línea de comandos de forma sencilla.}
   \item{\href{https://huggingface.co/}{HuggingFace}: Librería implementada por la comunidad de inteligencia artificial homónima para cargar modelos almacenados en su servicio web.}
+  \item{\href{https://pypi.org/project/onnx/}{ONNX}: Librería para gestionar redes neuronales en formato ONNX (\textit{Open Neural Network eXchange}).}
 \end{itemize}
 
 Por último, el proceso de entrenamiento de la red también requiere las siguientes dependencias:
@@ -718,7 +743,7 @@ Este \textit{framework} está dividido en múltiples módulos:
   \item{\texttt{utils}: Almacena utilidades varias, con distintos propósitos.}
 \end{itemize}
 
-Al ser un framework extenso que no se emplea en su totalidad en el proyecto, se explicarán a continuación las funcionalidades del mismo empleadas por DDColor, así como las diferencias entre la implementación de DDColor encontrada en el directorio \texttt{ddcolor} y la que forma parte de \texttt{BasicSR}.
+Al ser un framework extenso que no se emplea en su totalidad en el proyecto, se explicarán a continuación las funcionalidades del mismo empleadas por DDColor.
 
 \subsubsection{Registro}
 
@@ -826,9 +851,16 @@ En cuanto a \texttt{FFNLayer}, éste implementa como módulo de PyTorch la arqui
 
 \paragraph{PositionEmbeddingSine}
 
-Este módulo implementa una versión modificada de la función de generación de \textit{embeddings} posicionales empleada en \cite{Attention}.
+Este módulo implementa una versión modificada de la función de generación de \textit{embeddings} posicionales empleada en \cite{Attention} (a continuación se reproduce la expresión de la misma):
 
-% TODO: Fórmula
+\begin{equation}
+  PE_(pos, 2i) = sin(\frac{pos}{10000^\frac{2i}{d_{model}}});
+  PE_(pos, 2i+1) = cos(\frac{pos}{10000^\frac{2i}{d_{model}}})
+\end{equation}
+
+Donde $pos$ es la posición del elemento e $i$ es la dimensión.
+
+La versión encontrada en este repositorio está generalizada para su uso en imágenes, implementando una versión bidimensional de la técnica (calculando \textit{embeddings} tanto para el eje $X$ como para el eje $Y$) que además permite normalizar los resultados.
 
 \paragraph{Transformer}
 
@@ -836,11 +868,46 @@ Como se indica al principio de la clase en un comentario, esta es una versión l
 
 Se emplea en la implementación de DDColor de \texttt{BasicSR}, para el \texttt{SingleColorDecoder}.
 
-% TODO: Cambios
+Como cambios principales con respecto a un \textit{transformer} estándar:
+
+\begin{itemize}
+  \item{La capa de normalización al final del \textit{encoder} se sustrae.}
+  \item{El \textit{decoder} devuelve los resultados normalizados de todas las capas intermedias.}
+  \item{A la capa de \textit{multi-head attention} encargada de procesar el resultado del \textit{encoder} se le introduce también la posición de cada elemento.}
+\end{itemize}
 
 \subsubsection{Entrenamiento}
 
-% TODO
+El proceso de entrenamiento de la red se implementa íntegramente en \texttt{BasicSR}, siguiendo el siguiente proceso:
+
+\begin{enumerate}
+  \item{Carga del estado previo de la red (en caso de que exista). Si no existe, crear la estructura de directorios necesaria para almacenarlo.}
+  \item{Inicialización de un \textit{logger} (encargado de dejar una traza de los procesos realizados durante el entrenamiento).}
+  \item{Inicialización de un \textit{prefetcher} (en la CPU o GPU dependiendo del dispositivo de cálculo a emplear), el cual se encarga de cargar los datos para la siguiente \textit{batch} mientras se está procesando la actual.}
+  \item{Para cada época de entrenamiento, mientras queden datos en el \textit{prefetcher}:
+    \begin{enumerate}
+      \item{Se actualiza la \textit{learning rate} del modelo, empleando un \textit{scheduler}.}
+      \item{Se introducen los datos de entrenamiento en el modelo.}
+      \item{Se optimizan los parámetros de aprendizaje del modelo, empleando el optimizador \textit{Adam} o \textit{AdamW} de PyTorch.}
+      \item{Opcionalmente, se puede emplear el \textit{logger} para dejar trazas de algunos datos (imágenes de entrenamiento, estado del modelo, información sobre el entrenamiento) a intervalos regulares.}
+      \item{Opcionalmente, se puede realizar una validación del modelo a intervalos regulares.}
+      \item{Se pasa al siguiente \textit{batch} de datos del \textit{prefetcher}.}
+    \end{enumerate}
+  }
+\end{enumerate}
+
+Esta implementación es configurable mediante un archivo de configuración en formato YAML ubicado en el directorio \texttt{options/train}.
+
+\subsection{Scripts}
+
+Se implementan múltiples \textit{scripts}:
+
+\begin{itemize}
+  \item{\texttt{export\_onnx.py}: Exporta el modelo en formato ONNX.}
+  \item{\texttt{get\_meta\_file.py}: En base a un directorio que contenga un dataset, encuentra todas las imágenes y crea un archivo de ``índice'' que contiene las rutas a todas ellas.}
+  \item{\texttt{infer.py}: Carga las imágenes de un directorio especificado por el usuario, carga el modelo de un archivo de pesos local o de \textit{HuggingFace} y ejecuta una \texttt{ColorizationPipeline} para colorizar las imágenes cargadas.}
+  \item{\texttt{train.bat}: Lanza el archivo \texttt{train.py} de \texttt{BasicSR} para ejecutar el proceso de entrenamiento del modelo según la configuración encontrada en \texttt{options/train/train\_ddcolor.yml}.}
+\end{itemize}
 
 \subsection{Contribución propia}
 
@@ -1044,133 +1111,38 @@ A su vez, veremos también que resultados nos lanzan las métricas utilizadas. V
 
 La aplicación \textit{DDColor Lab} es una herramienta de escritorio desarrollada en Python que permite colorizar imágenes en escala de grises mediante los modelos DDColor y comparar los resultados de forma visual y cuantitativa.
 
-\subsection{Instalación del entorno}
+\subsection{Requisitos previos}
 
 Para ejecutar la aplicación es necesario tener instaladas las siguientes dependencias:
 
 \begin{itemize}
-	\item \texttt{Python}: Version superior o igual a 3.10
-	\item \texttt{PyTorch}: Version superior o igual a 1.7
-	\texttt{torchvision}: framework de redes neuronales.
-	\item \texttt{opencv-python}: operaciones de visión por ordenador.
-	\item \texttt{pillow}: lectura y procesamiento de imágenes.
-	\item \texttt{scikit-image}: necesario para el cálculo de la métrica $\Delta E$.
-	
+  \item \texttt{torch} y \texttt{torchvision}: framework de redes neuronales.
+  \item \texttt{opencv-python}: operaciones de visión por ordenador.
+  \item \texttt{pillow}: lectura y procesamiento de imágenes.
+  \item \texttt{scikit-image}: necesario para el cálculo de la métrica $\Delta E$.
+  \item \texttt{lpips}: necesario para el cálculo de la métrica LPIPS. Opcional; si no está instalado, dicha métrica mostrará \texttt{---}.
+  \item El paquete \texttt{ddcolor} instalado en modo desarrollo (\texttt{python setup.py develop}).
 \end{itemize}
 
-\subsubsection{Creación del entorno}
-
-El siguiente comando crea un entorno Conda aislado con Python:
-
-\begin{verbatim}
-conda create -n ddcolor python=3.9
-conda activate ddcolor
-\end{verbatim}
-
-Como alternativa, puede crearse un entorno virtual independiente de Python:
-
-\begin{verbatim}
-python -m venv venv
-source venv/bin/activate        # Linux / macOS
-venv\Scripts\activate           # Windows
-\end{verbatim}
-
-\subsubsection{Dependencias}
-
-Una vez activado el entorno, se instala PyTorch con soporte para CUDA 11.8. Si no se dispone de GPU compatible, puede omitirse el argumento \texttt{--index-url} y se instalará la versión de CPU:
-
-\begin{verbatim}
-pip install torch==2.2.0 torchvision==0.17.0 \
-    --index-url https://download.pytorch.org/whl/cu118
-\end{verbatim}
-
-Las dependencias necesarias para ejecutar la inferencia se instalan con:
-
-\begin{verbatim}
-pip install -r requirements.txt
-\end{verbatim}
-
-\subsection{Descarga de modelos}
-
-Previo a la ejecución del programa, deben descargarse los pesos de los tres modelos que se evalúan y colocarse dentro de una carpeta \texttt{./models/} en la raíz del proyecto. \textbf{IMPORTANTE: Los archivos descargados de tipo \texttt{.bin} deben renombrarse con extensión \texttt{.pth}. Deben respetarse exactamente los nombres \texttt{ddcolor\_comic.pth}, \texttt{ddcolor\_realistic.pth} y \texttt{ddcolor\_artistic.pth}.}
-
-Los enlaces de descarga directa desde el navegador son:
+Además, deben colocarse los pesos de los modelos en el directorio \texttt{./models/} con los siguientes nombres:
 
 \begin{itemize}
-  \item \texttt{ddcolor\_comic.pth}: modelo fine-tuned sobre imágenes de cómic.\\
-  \url{https://huggingface.co/Aleparqui/PID_proyect/blob/main/net_g_latest.pth}
-
-  \item \texttt{ddcolor\_realistic.pth}: modelo oficial de ModelScope (realista).\\
-  \url{https://huggingface.co/piddnad/ddcolor_modelscope/blob/main/pytorch_model.bin}
-
-  \item \texttt{ddcolor\_artistic.pth}: modelo artístico de ModelScope.\\
-  \url{https://huggingface.co/piddnad/ddcolor_artistic/blob/main/pytorch_model.bin}
+  \item \texttt{ddcolor\_comic.pth}: modelo fine-tuned sobre imágenes de cómic.
+  \item \texttt{ddcolor\_realistic.pth}: modelo oficial de ModelScope (realista).
+  \item \texttt{ddcolor\_artistic.pth}: modelo artístico de ModelScope.
 \end{itemize}
 
-\subsubsection{Ejemplo de descarga desde el navegador}
-
-A continuación se ilustra el proceso con \texttt{ddcolor\_comic}. Repetir con cada modelo.
-
-\paragraph{PASO 1:} Acceder al enlace del modelo, en este caso:\\
-\url{https://huggingface.co/Aleparqui/PID_proyect/blob/main/net_g_latest.pth}
-
-\paragraph{PASO 2:} Pulsar el botón \textit{Download} situado en la parte superior izquierda de la página (ver Figura~\ref{fig:captura_hf}).
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=\textwidth]{../assets/images/captura_hf.jpg}
-  \caption{Captura de Hugging Face para descargar el modelo.}
-  \label{fig:captura_hf}
-\end{figure}
-
-\paragraph{PASO 3:} Renombrar el archivo correctamente y colocarlo dentro de la carpeta \texttt{DDColor/models} (ver Figura~\ref{fig:captura_explorador}).
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.5\textwidth]{../assets/images/captura_explorador.jpg}
-  \caption{Captura del explorador de archivos con los pesos correctamente ubicados.}
-  \label{fig:captura_explorador}
-\end{figure}
-
-\subsubsection{Descarga programática}
-
-Como alternativa, los tres ficheros pueden descargarse automáticamente con \texttt{huggingface\_hub}:
-
-\begin{verbatim}
-pip install huggingface_hub
-
-from huggingface_hub import hf_hub_download
-
-# Modelo cómic (fine-tune propio)
-hf_hub_download(repo_id="Aleparqui/PID_proyect",
-                filename="net_g_latest.pth",
-                local_dir="./models/")
-# Renombrar a ddcolor_comic.pth
-
-# Modelo realista
-hf_hub_download(repo_id="piddnad/ddcolor_modelscope",
-                filename="pytorch_model.bin",
-                local_dir="./models/")
-# Renombrar a ddcolor_realistic.pth
-
-# Modelo artístico
-hf_hub_download(repo_id="piddnad/ddcolor_artistic",
-                filename="pytorch_model.bin",
-                local_dir="./models/")
-# Renombrar a ddcolor_artistic.pth
-\end{verbatim}
-
-Si alguno de los pesos no está disponible, la aplicación entra automáticamente en \textbf{modo DEMO} para ese modelo, aplicando una colorización sintética sin necesidad de ejecutar la red neuronal.
+Si alguno de los pesos no está disponible, la aplicación entra automáticamente en \textbf{modo DEMO} para ese modelo, aplicando una colorización sintética de demostración sin necesidad de ejecutar la red neuronal.
 
 \subsection{Puesta en marcha}
 
-Una vez cumplidos los requisitos y descargados los tres modelos, la aplicación se lanza ejecutando:
+Una vez cumplidos los requisitos, la aplicación se lanza ejecutando:
 
 \begin{verbatim}
 python ddcolor_desktop.py
 \end{verbatim}
 
-\textbf{IMPORTANTE:} Al iniciarse, la aplicación carga los modelos en segundo plano e indica su estado en la esquina superior derecha de la ventana. Esperar a que carguen y a que aparezca el mensaje \textit{Listo} en verde.
+Al iniciarse, la aplicación carga los modelos en segundo plano e indica su estado en la esquina superior derecha de la ventana (\textit{Listo} en verde si todos los pesos se han cargado correctamente, o en ámbar si alguno opera en modo DEMO).
 
 \subsection{Interfaz}
 
@@ -1208,11 +1180,12 @@ Pulsar el botón \textit{Ejecutar}. La barra de progreso indica que el proceso e
 
 \subsubsection{Consultar las métricas}
 
-Navegar a la pestaña \textbf{Métricas} para ver la tabla comparativa. Para cada métrica, se marca en verde el modelo que obtiene el mejor resultado. Las métricas disponibles son:
+Navegar a la pestaña \textbf{Métricas} para ver la tabla comparativa. Para cada métrica, se marca en verde el modelo que obtiene el mejor resultado. Las tres métricas disponibles son:
 
 \begin{itemize}
   \item $\Delta CF$: diferencia en viveza cromática respecto al ground truth. Valores cercanos a 0 indican que la paleta de color es similar a la referencia.
   \item $\Delta E_{2000}$: error colorimétrico perceptual medio píxel a píxel en el espacio CIELAB. Un valor menor implica mayor fidelidad de color.
+  \item \textit{LPIPS}: similitud perceptual basada en características de red neuronal. Un valor menor indica mayor parecido visual con el ground truth.
 \end{itemize}
 
 \subsubsection{Guardar los resultados}
@@ -1226,87 +1199,6 @@ Pulsar el botón \textit{Guardar resultados} para exportar las imágenes coloriz
 \end{itemize}
 
 Solo se exportan los modelos que estaban activos y produjeron un resultado.
-
-\subsection{Publicación de los pesos en Hugging Face}
-
-Con el objetivo de facilitar la reproducibilidad del trabajo y permitir que cualquier usuario pueda utilizar el modelo fine-tuned sin necesidad de reentrenarlo, los pesos resultantes del entrenamiento se han publicado en Hugging Face, una plataforma ampliamente utilizada en la comunidad de inteligencia artificial para alojar y compartir modelos, datasets y aplicaciones de forma pública y gratuita.
-
-Hugging Face organiza los modelos en repositorios con control de versiones basado en Git, de forma análoga a GitHub pero orientada específicamente a ficheros de gran tamaño como pesos de redes neuronales. Cada repositorio incluye una \textit{Model Card}, un documento en formato Markdown que describe el modelo, su entrenamiento y cómo utilizarlo.
-
-El repositorio del proyecto se encuentra en:
-
-\begin{center}
-  \url{https://huggingface.co/Aleparqui/PID_proyect}
-\end{center}
-
-\subsubsection{Contenido del repositorio}
-
-El repositorio está registrado como modelo de tipo \textit{Image-to-Image} con las etiquetas \texttt{image-colorization}, \texttt{ddcolor} y \texttt{comic-books}, lo que lo hace indexable y localizable dentro de la plataforma. Contiene dos elementos principales:
-
-\begin{itemize}
-  \item \textbf{Fichero de pesos} \texttt{net\_g\_latest.pth}: generado automáticamente por BasicSR al finalizar el entrenamiento. El nombre \texttt{latest} indica que corresponde al estado del generador en la última iteración completada. Este fichero es el que debe descargarse para usar el modelo en la aplicación o en cualquier script de inferencia.
-
-  \item \textbf{Model Card}: documento en formato Markdown redactado desde la interfaz web de Hugging Face. Recoge la descripción del modelo, el modelo base del que parte (\texttt{piddnad/ddcolor\_modelscope}), el dataset de entrenamiento empleado, los hiperparámetros principales y ejemplos de código para realizar inferencias.
-\end{itemize}
-
-\subsubsection{Proceso de subida}
-
-La subida de los pesos se realizó mediante la herramienta de línea de comandos \texttt{huggingface\_hub}, siguiendo estos pasos:
-
-\begin{enumerate}
-  \item \textbf{Creación de la cuenta y el repositorio} en \url{https://huggingface.co}. Al crear el repositorio se seleccionó el tipo \textit{Model} y se activó la visibilidad pública para que cualquier usuario pueda acceder a los pesos sin necesidad de autenticación.
-
-  \item \textbf{Instalación de la herramienta} en el entorno local:
-  \begin{verbatim}
-  pip install huggingface_hub
-  \end{verbatim}
-
-  \item \textbf{Autenticación local} mediante un token de acceso personal, generado desde los ajustes de la cuenta en la web de Hugging Face (\textit{Settings} $\rightarrow$ \textit{Access Tokens}):
-  \begin{verbatim}
-  huggingface-cli login
-  \end{verbatim}
-  El comando solicita el token por consola y lo almacena localmente para las operaciones posteriores.
-
-  \item \textbf{Subida del fichero de pesos} al repositorio:
-  \begin{verbatim}
-  huggingface-cli upload Aleparqui/PID_proyect \
-      ./models/net_g_latest.pth net_g_latest.pth
-  \end{verbatim}
-  El primer argumento es el identificador del repositorio en Hugging Face, el segundo es la ruta local del fichero y el tercero es el nombre con el que quedará almacenado en el repositorio.
-
-  \item \textbf{Redacción de la Model Card} directamente desde la interfaz web del repositorio, en la pestaña \textit{Model card}.
-\end{enumerate}
-
-\subsubsection{Descarga de los pesos}
-
-Una vez publicados, los pesos pueden descargarse de tres formas:
-
-\paragraph{Opción A --- Descarga programática con \texttt{huggingface\_hub} (recomendada):}
-\begin{verbatim}
-from huggingface_hub import hf_hub_download
-
-hf_hub_download(
-    repo_id="Aleparqui/PID_proyect",
-    filename="net_g_latest.pth",
-    local_dir="./models/"
-)
-\end{verbatim}
-
-\paragraph{Opción B --- CLI de Hugging Face:}
-\begin{verbatim}
-huggingface-cli download Aleparqui/PID_proyect \
-    net_g_latest.pth --local-dir ./models/
-\end{verbatim}
-
-\paragraph{Opción C --- Descarga directa desde el navegador:}
-
-Accediendo a la pestaña \textit{Files and versions} del repositorio o directamente a la URL:
-\begin{verbatim}
-https://huggingface.co/Aleparqui/PID_proyect/
-        resolve/main/net_g_latest.pth
-\end{verbatim}
-
-En los tres casos, el fichero descargado debe renombrarse a \texttt{ddcolor\_comic.pth} para que la aplicación \textit{DDColor Lab} lo detecte correctamente.
 
 \section{Conclusiones}
 
@@ -1363,34 +1255,8 @@ Sin embargo y pese a todas estas complicaciones nos sentimos profundamente orgul
 Siendo que ha sido un trabajo cuyos resultados no son satisfactorios del todo, pensamos que hay muchas formas de extender este proyecto en el futuro. Pensamos que pueden idearse modificaciones en la compleja arquitectura ofrecida para que trabaje mejor sobre imágenes ''no fotorrealistas''. A su vez, a partir de la construcción de este proyecto hemos pensado que sería de gran interés el desarrollo de una nueva métrica que tenga en consideración el ámbito de la colorización de imágenes, que es muy concreto y parece no estar del todo bien definido, puesto la mayoría de métricas se centran en el ámbito ''estructural'' de la imagen, y no en el color.
 
 \section{Autoevaluación}
-En esta sección cada integrante del grupo detalla la puntuación para el trabajo que se considera justa en cada apartado de una rúbrica proporcionada por el profesorado. 
 
-\subsection{José Carlos Mora López}
-
-\begin{table}[h!]
-	\centering
-	\begin{tabular}{|l|l|}
-		\hline
-		\textbf{CRITERIO} & \textbf{PUNTUACIÓN} \\ \hline
-		
-		\multicolumn{2}{|l|}{\textbf{Exposición}} \\ \hline
-		Comprensión y dominio (puntúa triple) & No procede \\ \hline
-		Exposición didáctica & No procede \\ \hline
-		Integración del equipo & No procede \\ \hline
-		
-		\multicolumn{2}{|l|}{\textbf{Implementación}} \\ \hline
-		Objetivos (puntúa doble) & REGULAR \\ \hline
-		Aspectos didácticos & EXCELENTE \\ \hline
-		Experimentación y conclusiones & BIEN \\ \hline
-		
-		\multicolumn{2}{|l|}{\textbf{Documentación}} \\ \hline
-		Contenidos & BIEN \\ \hline
-		Divulgación de los contenidos & BIEN \\ \hline
-		Bibliografía. Recursos científicos & EXCELENTE \\ \hline
-		
-	\end{tabular}
-\end{table}
-
+Siguiendo la rúbrica dada, se debe detallar, por parte de  \textbf{cada miembro del grupo}, la puntuación para el trabajo que se considera justa en cada apartado. 
 
 \section{Tabla de tiempos}
 
