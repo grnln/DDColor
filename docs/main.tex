@@ -647,6 +647,67 @@ Aparte de instanciar la arquitectura que se explicó en la sección correspondie
 
 \subsection{Contribución propia}
 
+La aportación del grupo al proyecto se divide en dos líneas de trabajo independientes pero complementarias: el reentrenamiento del modelo sobre un dominio no fotorrealista y el desarrollo de una aplicación de escritorio para la evaluación de los resultados, incluyendo la implementación de las métricas elegidas.
+
+\subsubsection{Reentrenamiento sobre dataset de cómics}
+
+El objetivo de esta línea de trabajo es adaptar DDColor al dominio de las viñetas de cómic, que presenta características visuales radicalmente distintas a las fotografías sobre las que fue entrenado originalmente: líneas de contorno definidas, colores planos o con sombreado simple, paletas limitadas y ausencia de texturas fotorrealistas.
+
+\paragraph{Dataset}
+
+Para el reentrenamiento se utilizó el dataset \textit{Comic Books Images}, publicado en Kaggle por Cenk Bircanoglu. Contiene 52.156 imágenes RGB distribuidas en 86 clases de cómics, incluyendo tanto portadas como páginas interiores. Las imágenes del dataset presentan una escala de 288~×~432~px.
+
+El dataset se dividió por clases con una proporción 80/20, resultando en aproximadamente 41.725 imágenes de entrenamiento y 10.431 de test. Durante el entrenamiento, las imágenes en color se usaron como ground truth para los canales \textit{ab}; la entrada a la red se generó convirtiendo cada imagen al canal \textit{L} del espacio CIELAB, que corresponde a la luminancia, reproduciendo así el esquema de entrenamiento supervisado del modelo original.
+
+\paragraph{Configuración del entrenamiento}
+ 
+El proceso de entrenamiento se llevó a cabo utilizando la infraestructura de \texttt{BasicSR} ya presente en el repositorio, que gestiona el bucle de entrenamiento, el guardado de checkpoints y el registro de métricas. Los hiperparámetros principales empleados fueron:
+ 
+\begin{itemize}
+  \item \textbf{Optimizador del generador}: AdamW con tasa de aprendizaje $10^{-4}$, \textit{weight decay} 0.01 y \textit{betas} (0.9, 0.99).
+  \item \textbf{Scheduler}: MultiStepLR con reducciones ($\gamma = 0.5$) en las iteraciones 50.000, 75.000, 100.000, 125.000 y 150.000.
+  \item \textbf{Total de iteraciones}: 200.000, con un periodo de \textit{warmup} de 1.000 iteraciones.
+  \item \textbf{Función de pérdida}: combinación de pérdida L1 (peso 0.1), pérdida perceptual VGG16-BN (peso 5.0), pérdida GAN vanilla (peso 1.0) y pérdida de colorfulness (peso 0.5).
+  \item \textbf{Augmentación}: volteo horizontal aleatorio. Sin rotación ni CutMix/FMix.
+  \item \textbf{Tamaño de entrada durante entrenamiento}: 128~×~128~px (\textit{gt\_size}).
+\end{itemize}
+ 
+El generador se entrenó desde cero sobre el dataset de cómics, sin partir de los pesos del modelo oficial (\texttt{pretrain\_network\_g: \textasciitilde{}} en el fichero de configuración). No obstante, el encoder ConvNeXT-L sí se inicializó con pesos preentrenados en clasificación de imágenes (\texttt{encoder\_from\_pretrain: True}), lo que permite que la red disponga desde el inicio de una representación semántica robusta de la imagen, acelerando la convergencia del entrenamiento.
+
+\paragraph{Resultado}
+
+El modelo resultante se guarda en formato \texttt{.pth} mediante el mecanismo de checkpoints de BasicSR, con el nombre \texttt{net\_g\_latest.pth}, correspondiente al estado del generador en la última iteración completada. Dicho fichero se ha publicado en Hugging Face para su distribución pública, tal como se describe en la subsección correspondiente del manual de usuario.
+
+\subsubsection{Aplicación de escritorio: DDColor Lab}
+
+La segunda contribución es \textit{DDColor Lab}, una aplicación de escritorio desarrollada en Python con \texttt{tkinter} que permite colorizar imágenes utilizando los tres modelos disponibles y comparar los resultados de forma visual y cuantitativa, sin necesidad de interactuar con la línea de comandos.
+
+\paragraph{Motivación}
+
+El repositorio original de DDColor no dispone de ninguna interfaz gráfica; la inferencia se realiza exclusivamente mediante scripts de línea de comandos. Esto dificulta la evaluación comparativa de modelos sobre una misma imagen y la inspección visual de los resultados. La aplicación desarrollada cubre esta carencia.
+
+\paragraph{Estructura de la aplicación}
+
+La aplicación se implementa en un único fichero (\texttt{ddcolor\_desktop.py}) y se organiza en torno a la clase principal \texttt{App}, que hereda de \texttt{tk.Tk}. La interfaz se divide en tres pestañas: \textit{Colorizar y comparar}, \textit{Métricas} y \textit{Guía}.
+
+Internamente, la lógica se separa en tres bloques bien diferenciados:
+
+\begin{itemize}
+  \item \textbf{Capa de inferencia}: funciones independientes de la UI que gestionan la carga de los modelos mediante \texttt{try\_load\_pipeline} y ejecutan la colorización.
+
+  \item \textbf{Capa de métricas}: implementación de $\Delta CF$ y $\Delta E_{2000}$ como funciones independientes. $\Delta CF$ se calcula según la fórmula de Hasler \& Süsstrunk. $\Delta E_{2000}$ se implementa de forma completamente vectorizada en NumPy, siguiendo los siete pasos del estándar CIE (croma, factor $G$, tono $h'$, diferencias, factores $S_L/S_C/S_H$, término de rotación $R_T$ y fórmula final), sin dependencias externas adicionales.
+
+  \item \textbf{Capa de interfaz}: construida con \texttt{tkinter} y \texttt{ttk}. La colorización se ejecuta en un hilo separado (\texttt{threading.Thread}) para mantener la interfaz responsiva. Los resultados de los tres modelos se muestran en paralelo: el modelo Cómic FT en la columna izquierda y los modelos Realista y Artístico en pestañas intercambiables en la columna derecha.
+\end{itemize}
+
+\paragraph{Modo DEMO}
+
+Si algún fichero de pesos no está disponible al arrancar, la aplicación entra en \textbf{modo DEMO} para ese modelo. En este modo se aplica una colorización sintética basada en transformaciones trigonométricas sobre el canal $L$ del espacio LAB, con patrones diferenciados por estilo (\textit{comic}, \textit{realistic}, \textit{artistic}), lo que permite que la aplicación funcione aunque no esten todos los pesos presentes.
+
+\paragraph{Cálculo y visualización de métricas}
+
+Tras cada colorización, la aplicación calcula automáticamente las tres métricas para cada modelo activo, usando la imagen de entrada como ground truth por defecto. El usuario puede cargar una imagen de referencia alternativa mediante el botón \textit{Abrir GT (opcional)}. Los resultados se presentan en la pestaña \textit{Métricas} en una tabla comparativa donde el mejor valor de cada fila se resalta en verde.
+
 \section{Experimentación}
 
 Una sección de ejemplos comentados y pruebas realizadas con la implementación desarrollada es {\textit imprescindible} en este trabajo. Si existen distintos parámetros que intervienen en el método, se deben comprender y experimentar con ellos. También puede ser de interés probar distintos tipos de imágenes dentro del contexto del trabajo. Igualmente importantes (o más) serán las conclusiones que se puedan obtener de la experimentación realizada. 
