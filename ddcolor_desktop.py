@@ -35,12 +35,6 @@ except ImportError:
     TORCH_OK = False
 
 try:
-    from skimage.color import rgb2lab
-    SKIMAGE_OK = True
-except ImportError:
-    SKIMAGE_OK = False
-
-try:
     import lpips as lpips_lib
     _lpips_fn = None  # se inicializa lazy
     LPIPS_OK = True
@@ -129,7 +123,7 @@ def metric_delta_cf(pred_bgr: np.ndarray, gt_bgr: np.ndarray) -> float | None:
 
 def metric_delta_e(pred_bgr: np.ndarray, gt_bgr: np.ndarray) -> float | None:
     """ΔE 2000 medio píxel a píxel, implementación vectorizada en NumPy. ↓ mejor."""
-    if gt_bgr is None or not SKIMAGE_OK:
+    if gt_bgr is None:
         return None
 
     gt_rs    = cv2.resize(gt_bgr, (pred_bgr.shape[1], pred_bgr.shape[0]))
