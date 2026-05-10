@@ -1,1 +1,1 @@
-python basicsr/train.py -opt options/train/train_ddcolor.yml
+python basicsr/train.py -opt options/train/train_ddcolor.yml --auto_resume

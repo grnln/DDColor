@@ -546,7 +546,6 @@ Por último, el proceso de entrenamiento de la red también requiere las siguien
 
 \begin{itemize}
   \item{\href{https://pyyaml.org/}{PyYAML}: Implementa operaciones de gestión de ficheros en formato YAML en Python.}
-  \item{\href{https://scikit-image.org/}{Scikit-image}: Implementa operaciones de procesamiento de imágenes.}
   \item{\href{https://scipy.org/}{SciPy}: Implementa algoritmos para computación científica.}
   \item{\href{https://www.tensorflow.org/tensorboard}{TensorBoard}: Implementa herramientas de visualización para la experimentación de machine learning (parte del proyecto TensorFlow).}
   \item{\href{https://wandb.ai/site/}{Weights \& Biases}: Implementa un \textit{framework} para gestionar modelos de inteligencia artificial.}
@@ -904,10 +903,194 @@ Se implementan múltiples \textit{scripts}:
 
 \subsection{Contribución propia}
 
+La aportación del grupo al proyecto se divide en dos líneas de trabajo independientes pero complementarias: el reentrenamiento del modelo sobre un dominio no fotorrealista y el desarrollo de una aplicación de escritorio para la evaluación de los resultados, incluyendo la implementación de las métricas elegidas.
+
+\subsubsection{Reentrenamiento sobre dataset de cómics}
+
+El objetivo de esta línea de trabajo es adaptar DDColor al dominio de las viñetas de cómic, que presenta características visuales radicalmente distintas a las fotografías sobre las que fue entrenado originalmente: líneas de contorno definidas, colores planos o con sombreado simple, paletas limitadas y ausencia de texturas fotorrealistas.
+
+\paragraph{Dataset}
+
+Para el reentrenamiento se utilizó el dataset \textit{Comic Books Images}, publicado en Kaggle por Cenk Bircanoglu. Contiene 52.156 imágenes RGB distribuidas en 86 clases de cómics, incluyendo tanto portadas como páginas interiores. Las imágenes del dataset presentan una escala de 288~×~432~px.
+
+El dataset se dividió por clases con una proporción 80/20, resultando en aproximadamente 41.725 imágenes de entrenamiento y 10.431 de test. Durante el entrenamiento, las imágenes en color se usaron como ground truth para los canales \textit{ab}; la entrada a la red se generó convirtiendo cada imagen al canal \textit{L} del espacio CIELAB, que corresponde a la luminancia, reproduciendo así el esquema de entrenamiento supervisado del modelo original.
+
+\paragraph{Configuración del entrenamiento}
+ 
+El proceso de entrenamiento se llevó a cabo utilizando la infraestructura de \texttt{BasicSR} ya presente en el repositorio, que gestiona el bucle de entrenamiento, el guardado de checkpoints y el registro de métricas. Los hiperparámetros principales empleados fueron:
+ 
+\begin{itemize}
+  \item \textbf{Optimizador del generador}: AdamW con tasa de aprendizaje $10^{-4}$, \textit{weight decay} 0.01 y \textit{betas} (0.9, 0.99).
+  \item \textbf{Scheduler}: MultiStepLR con reducciones ($\gamma = 0.5$) en las iteraciones 50.000, 75.000, 100.000, 125.000 y 150.000.
+  \item \textbf{Total de iteraciones}: 200.000, con un periodo de \textit{warmup} de 1.000 iteraciones.
+  \item \textbf{Función de pérdida}: combinación de pérdida L1 (peso 0.1), pérdida perceptual VGG16-BN (peso 5.0), pérdida GAN vanilla (peso 1.0) y pérdida de colorfulness (peso 0.5).
+  \item \textbf{Augmentación}: volteo horizontal aleatorio. Sin rotación ni CutMix/FMix.
+  \item \textbf{Tamaño de entrada durante entrenamiento}: 128~×~128~px (\textit{gt\_size}).
+\end{itemize}
+ 
+El generador se entrenó desde cero sobre el dataset de cómics, sin partir de los pesos del modelo oficial (\texttt{pretrain\_network\_g: \textasciitilde{}} en el fichero de configuración). No obstante, el encoder ConvNeXT-L sí se inicializó con pesos preentrenados en clasificación de imágenes (\texttt{encoder\_from\_pretrain: True}), lo que permite que la red disponga desde el inicio de una representación semántica robusta de la imagen, acelerando la convergencia del entrenamiento.
+
+\paragraph{Resultado}
+
+El modelo resultante se guarda en formato \texttt{.pth} mediante el mecanismo de checkpoints de BasicSR, con el nombre \texttt{net\_g\_latest.pth}, correspondiente al estado del generador en la última iteración completada. Dicho fichero se ha publicado en Hugging Face para su distribución pública, tal como se describe en la subsección correspondiente del manual de usuario.
+
+\subsubsection{Aplicación de escritorio: DDColor Lab}
+
+La segunda contribución es \textit{DDColor Lab}, una aplicación de escritorio desarrollada en Python con \texttt{tkinter} que permite colorizar imágenes utilizando los tres modelos disponibles y comparar los resultados de forma visual y cuantitativa, sin necesidad de interactuar con la línea de comandos.
+
+\paragraph{Motivación}
+
+El repositorio original de DDColor no dispone de ninguna interfaz gráfica; la inferencia se realiza exclusivamente mediante scripts de línea de comandos. Esto dificulta la evaluación comparativa de modelos sobre una misma imagen y la inspección visual de los resultados. La aplicación desarrollada cubre esta carencia.
+
+\paragraph{Estructura de la aplicación}
+
+La aplicación se implementa en un único fichero (\texttt{ddcolor\_desktop.py}) y se organiza en torno a la clase principal \texttt{App}, que hereda de \texttt{tk.Tk}. La interfaz se divide en tres pestañas: \textit{Colorizar y comparar}, \textit{Métricas} y \textit{Guía}.
+
+Internamente, la lógica se separa en tres bloques bien diferenciados:
+
+\begin{itemize}
+  \item \textbf{Capa de inferencia}: funciones independientes de la UI que gestionan la carga de los modelos mediante \texttt{try\_load\_pipeline} y ejecutan la colorización.
+
+  \item \textbf{Capa de métricas}: implementación de $\Delta CF$ y $\Delta E_{2000}$ como funciones independientes. $\Delta CF$ se calcula según la fórmula de Hasler \& Süsstrunk. $\Delta E_{2000}$ se implementa de forma completamente vectorizada en NumPy, siguiendo los siete pasos del estándar CIE (croma, factor $G$, tono $h'$, diferencias, factores $S_L/S_C/S_H$, término de rotación $R_T$ y fórmula final), sin dependencias externas adicionales.
+
+  \item \textbf{Capa de interfaz}: construida con \texttt{tkinter} y \texttt{ttk}. La colorización se ejecuta en un hilo separado (\texttt{threading.Thread}) para mantener la interfaz responsiva. Los resultados de los tres modelos se muestran en paralelo: el modelo Cómic FT en la columna izquierda y los modelos Realista y Artístico en pestañas intercambiables en la columna derecha.
+\end{itemize}
+
+\paragraph{Modo DEMO}
+
+Si algún fichero de pesos no está disponible al arrancar, la aplicación entra en \textbf{modo DEMO} para ese modelo. En este modo se aplica una colorización sintética basada en transformaciones trigonométricas sobre el canal $L$ del espacio LAB, con patrones diferenciados por estilo (\textit{comic}, \textit{realistic}, \textit{artistic}), lo que permite que la aplicación funcione aunque no esten todos los pesos presentes.
+
+\paragraph{Cálculo y visualización de métricas}
+
+Tras cada colorización, la aplicación calcula automáticamente las tres métricas para cada modelo activo, usando la imagen de entrada como ground truth por defecto. El usuario puede cargar una imagen de referencia alternativa mediante el botón \textit{Abrir GT (opcional)}. Los resultados se presentan en la pestaña \textit{Métricas} en una tabla comparativa donde el mejor valor de cada fila se resalta en verde.
+
 \section{Experimentación}
+En esta sección veremos los resultados que ofrece el modelo que ha sido entrenado por nosotros con imágenes de cómic. Por tanto haremos una comparación entre esos resultados, y aquellos que devuelven tanto el modelo original de DDColor, como otro de los modelos que ofrecían en el ''ModelZoo'' llamado DDColor Artistic, que presume de haber sido entrenado con ''numerosas imágenes artísticas de alta calidad.'' \cite{DDColor}
 
-Una sección de ejemplos comentados y pruebas realizadas con la implementación desarrollada es {\textit imprescindible} en este trabajo. Si existen distintos parámetros que intervienen en el método, se deben comprender y experimentar con ellos. También puede ser de interés probar distintos tipos de imágenes dentro del contexto del trabajo. Igualmente importantes (o más) serán las conclusiones que se puedan obtener de la experimentación realizada. 
+A su vez, veremos también que resultados nos lanzan las métricas utilizadas. Veremos los valores de las métricas para cada imagen colorizada, así como los valores promedio según el uso de cada modelo. 
 
+
+\subsection{Resultados visuales}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth]{../assets/images/composicion2.jpg}
+	\caption{Comparación de imágenes con distintos modelos}
+	\label{fig:comparacion2}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth]{../assets/images/composicion_pokemon.jpg}
+	\caption{Comparación de la imagen pokemon.jpg}
+	\label{fig:pokemon}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth]{../assets/images/composicion.jpg}
+	\caption{Comparación de imágenes con distintos modelos}
+	\label{fig:comparacion1}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth]{../assets/images/composicion_tintin.jpg}
+	\caption{Comparación de la imagen tintin.jpg}
+	\label{fig:tintin}
+\end{figure}
+
+\subsection{Resultados métricas}
+
+\begin{table}[ht]
+	\centering
+	\begin{tabular}{lcc}
+		\hline
+		\textbf{Imagen} & \textbf{Delta\_CF} & \textbf{Delta\_E2000} \\
+		\hline
+		absolute\_batman.jpg      & 12.6877 & 18.8367 \\
+		akira.jpg                 & 1.6714  & 12.8701 \\
+		asterix\_1.jpg            & 57.1921 & 19.2883 \\
+		asterix\_2.jpg            & 10.0734 & 13.2037 \\
+		lucky\_luke\_1.jpg        & 16.1075 & 22.8637 \\
+		lucky\_luke\_2.jpeg       & 30.1830 & 41.6858 \\
+		marvel.jpg                & 2.7689  & 12.9357 \\
+		marvel\_avengers.jpg      & 29.6384 & 16.2720 \\
+		marvel\_new\_champions.jpg & 4.0098 & 23.0563 \\
+		mortadelo.jpg             & 23.6520 & 17.4882 \\
+		one\_piece.jpg            & 20.9205 & 18.2296 \\
+		pokemon.jpg               & 11.4864 & 17.2045 \\
+		tintin.jpg                & 20.6314 & 20.6781 \\
+		tintin\_2.jpg             & 27.4635 & 14.7820 \\
+		tintin\_3.jpg             & 19.6596 & 19.1067 \\
+		\hline
+		\textbf{Promedio} & \textbf{19.2097} & \textbf{19.2334} \\
+		\hline
+	\end{tabular}
+	\caption{Resultados de métricas usando modelo DDColor realistic}
+	\label{tab:resultados_realistic}
+\end{table}
+
+
+\begin{table}[ht]
+	\centering
+	\begin{tabular}{lcc}
+		\hline
+		\textbf{Imagen} & \textbf{Delta\_CF} & \textbf{Delta\_E2000} \\
+		\hline
+		absolute\_batman.jpg      & 0.6400  & 19.4613 \\
+		akira.jpg                 & 16.5826 & 16.3843 \\
+		asterix\_1.jpg            & 28.6617 & 17.7935 \\
+		asterix\_2.jpg            & 6.1184  & 12.3409 \\
+		lucky\_luke\_1.jpg        & 54.6577 & 23.8961 \\
+		lucky\_luke\_2.jpeg       & 50.4951 & 39.8653 \\
+		marvel.jpg                & 18.0748 & 12.6284 \\
+		marvel\_avengers.jpg      & 10.9533 & 16.1225 \\
+		marvel\_new\_champions.jpg & 15.3220 & 20.6679 \\
+		mortadelo.jpg             & 14.3198 & 20.2673 \\
+		one\_piece.jpg            & 4.7892  & 16.9771 \\
+		pokemon.jpg               & 38.0417 & 18.1276 \\
+		tintin.jpg                & 5.8026  & 20.2616 \\
+		tintin\_2.jpg             & 10.9177 & 12.0169 \\
+		tintin\_3.jpg             & 32.2647 & 16.9472 \\
+		\hline
+		\textbf{Promedio} & \textbf{20.5094} & \textbf{18.9172} \\
+		\hline
+	\end{tabular}
+	\caption{Resultados de métricas usando modelo DDColor Artistic}
+	\label{tab:resultados_artistic}
+\end{table}
+
+\begin{table}[ht]
+	\centering
+	\begin{tabular}{lcc}
+		\hline
+		\textbf{Imagen} & \textbf{Delta\_CF} & \textbf{Delta\_E2000} \\
+		\hline
+		absolute\_batman.jpg      & 28.3604 & 20.6365 \\
+		akira.jpg                 & 14.5903 & 14.3037 \\
+		asterix\_1.jpg            & 36.4340 & 19.3714 \\
+		asterix\_2.jpg            & 0.2364  & 17.4624 \\
+		lucky\_luke\_1.jpg        & 28.6139 & 23.5374 \\
+		lucky\_luke\_2.jpeg       & 6.0687  & 26.0178 \\
+		marvel.jpg                & 0.9691  & 12.4482 \\
+		marvel\_avengers.jpg      & 3.0104  & 15.3390 \\
+		marvel\_new\_champions.jpg & 11.8843 & 16.8584 \\
+		mortadelo.jpg             & 21.5674 & 14.5700 \\
+		one\_piece.jpg            & 7.7651  & 13.5605 \\
+		pokemon.jpg               & 21.6295 & 16.7241 \\
+		tintin.jpg                & 18.6748 & 26.5748 \\
+		tintin\_2.jpg             & 19.2296 & 18.5369 \\
+		tintin\_3.jpg             & 4.8448  & 17.5258 \\
+		\hline
+		\textbf{Promedio} & \textbf{14.9253} & \textbf{18.2318} \\
+		\hline
+	\end{tabular}
+	\caption{Resultados de métricas usando nuestro modelo}
+	\label{tab:resultados_comic}
+\end{table}
+
+\clearpage
 
 \section{Manual de usuario}
 
@@ -1004,7 +1187,57 @@ Solo se exportan los modelos que estaban activos y produjeron un resultado.
 
 \section{Conclusiones}
 
-Se debe introducir una sección de conclusiones que incluyan propuestas claras de mejora o extensión del trabajo (por ejemplo, si no se han podido alcanzar todos los objetivos iniciales). También conclusiones sobre los resultados obtenidos, en qué medida difieren de los esperados. Además, son apropiadas conclusiones sobre las desviaciones en cuanto a la planificación inicial de tiempos, así como conclusiones sobre la experiencia de la realización del trabajo (lecciones aprendidas).
+Teniendo en cuenta el ejercicio de experimentación y el trabajo realizado, hemos sacado las siguientes conclusiones como equipo.
+
+\subsection{Resultados obtenidos}
+
+Hablemos en primer lugar de los resultados en base al modelo que nosotros hemos entrenado. Viendo el apartado de ''Experimentación'' podemos concluir lo siguiente: Si bien existe algún que otro caso concreto donde se pueda notar una clara mejoría en la colorización de las páginas y portadas de cómics coloreadas (en comparación con los modelos ya propuestos originalmente por DDColor), no podemos ni de lejos admitir que se tratan de buenas colorizaciones. Es decir, \textbf{creemos que ninguna de las imágenes resultantes podrían engañar a ningún humano a la hora de discernir cuál se trata de la verdadera y cuál es la coloreada por nuestro modelo.} Eso no ocurría con las imágenes fotorrealistas de DDColor, que aseguraban ser (y con razón) el ''state-of-art'' de colorización automática. \cite{DDColor}. 
+
+Para esto, veamos el caso de Tintín, expuesto en el apartado de colorización \ref{fig:tintin}. A simple vista nuestro modelo parece discernir mejor algún que otro elemento de la imagen (Véase el cielo, o el recuadro donde pone ''TINTÍN Y LOS PICAROS'', que es de un color uniforme, como en el original). Sin embargo está muy lejos de ser una buena colorización. 
+
+Los problemas principales a la hora de colorizar estas imágenes de cómic son:
+
+\begin{itemize}
+	\item Predominancia del rojo y el azul sobre el resto de colores.
+	\item Manchas y ruidos en forma de degradado de distintos colores.
+	\item Malas interpretaciones cuando se tratan colores planos.
+\end{itemize}
+
+\medskip
+Podríamos pensar que estos problemas se solucionarían entrenando más y mejor al modelo, con más datos de forma que aprenda más. Pero creemos que el problema es mayor. La arquitectura y la forma en la que está construido DDcolor nos hace dilucidar que no trabaja bien en este dominio porque \textbf{no está preparado para ello}. Las color queries son mucho más complicadas de abstraer cuando nos referimos a cómics.
+
+\medskip
+Por otro lado, si bien alguno de los resultados nuestros son mejores a simple vista, ocurre también que el resto de modelos a veces nos sobrepasa con bastante ventaja. Para ello, puede verse el caso de Batman [\ref{fig:comparacion1}] donde la performance de nuestro modelo deja mucho que desear.
+
+Podemos imaginar, que en estilos artísticos donde las sombras y volúmenes sean mas realistas (en lugar de predominar la planaridad), los resultados de los modelos anteriores tendrán un buen desempeño, puesto que se acerca más a la realidad con la que han sido entrenados.
+
+\medskip
+Una conclusión que sacamos de esto (aunque en cierta medida era imaginable desde el principio), es que el dominio ''no fotorrealista'' es más complejo que el dominio ''fotorrealista'' en tanto y en cuanto hay tantos estilos gráficos como artistas dedicados a ello. Es decir, la realidad es más determinista. Es más concisa, sabes \textit{por donde va a salir}, es más esperable, pues todo sigue una lógica natural. Pero cuando hablamos de ilustraciones humanas, las reglas del juego cambian por completo. Las sombras no tienen porque comportarse de una forma determinada, ni los volúmenes, ni los contornos, ni los colores. Todo queda supeditado a quien sea la persona que lo ha imaginado.
+
+\subsection{Métricas empleadas}
+
+Otra conclusión que se puede ver claramente en el apartado de experimentación es que \textbf{las métricas elegidas no reflejan con exactitud los resultados}. 
+En un primer vistazo parece lógico pensar que Color Difference y Colorfulness Score son métricas que encajan a la perfección con el problema de la colorización. Pero nada más lejos de la realidad, no mide tan bien como nos gustaría. 
+
+Una de las razones es la siguiente: Hay cosas que probablemente tengan un color específico. Es decir, el mar suele ser azul, al igual que el cielo (si no esta atardeciendo o amaneciendo). Las nubes serán por norma general de diferentes tonos de grises, el sol amarillo, la luna gris. El fuego es rojo. 
+Lo que queremos decir es que todos estos elementos pueden llegar a compararse. Y tiene sentido. Si el modelo ha coloreado el sol de color verde, probablemente no encaje con el original (aunque justamente, como el dominio es no-fotorrealista, la fantasía permite que esas cosas puedan ocurrir. Pero vamos a suponer que no es el caso); y por tanto, estaría bien penalizado. 
+
+Sin embargo existen mil tipo de entidades que pueden ser de colores diferentes, pero mantener la lógica. La prenda de un personaje, su camiseta por ejemplo, puede ser roja, verde, azul... y no debería penalizarse el que difiera con el original. Que sea de otro color no indica que esté ''mal'' colorizado. 
+
+
+Para ver esto podemos fijarnos en el ejemplo de Pokemón [ \ref{fig:pokemon}]. Los resultados que ofrecen tanto el modelo Artistic, como el modelo Realistic son considerablemente mejores que el de nuestro modelo, que parece haber pintado todo de rojo sin más. Pero si nos fijamos en las métrica de Color Difference, el nuestro es el mejor valorado. Ofreciendo una puntuación de 16.72  [\ref{tab:resultados_comic}] sobre 18.12 [\ref{tab:resultados_artistic}] y 17.20 [\ref{tab:resultados_realistic}]. ¿Por qué ocurre esto? Los otros dos modelos han coloreado diferente el fondo, por lo que no coincide tanto con el original. Pero como decimos, no se ve mal, puesto el fondo podría ser de cualquier color ya que no es nada determinista. Y el fondo ocupa bastante espacio de la imagen. Eso ha dado ventaja a nuestro modelo sobre los otros dos, pese no tener sentido.
+
+
+Lo que verdaderamente debería indicar una mala colorización no son las comparaciones bajo una imagen ''original'', sino son los ruidos de colores que aparecen en los resultados. Esas manchas que se extienden sin aparente sentido, provocado por el funcionamiento de las color queries. Y ese nivel de percepción no es captado por las métricas utilizadas.
+
+\subsection{Objetivos alcanzados}
+
+Una vez visto el resultado general del proyecto nos quedamos con un sentimiento agridulce. Por un lado resulta evidente que los objetivos que pretendíamos alcanzar se han quedado algo por atrás. Si bien hemos intentado poner remedio a la colorización de dominios ''no-fotorrealistas'', no hemos tenido todo el éxito que nos gustaría con el entrenamiento de nuestro modelo. También creemos haber ''menospreciado'' el problema en un principio, y luego ha resultado ser mucho más complejo de lo que nos podíamos imaginar. Razón por la cual no hemos podido analizar la limitación de transparencias.
+
+Sin embargo y pese a todas estas complicaciones nos sentimos profundamente orgulloso del trabajo realizado, ya que el proyecto ha supuesto un proceso de aprendizaje de gran valor académico para cada uno de los integrantes del grupo. Y si bien la implementación ha sido algo frustrada, creemos que los resultados negativos no son un buen indicador de la cantidad de conocimiento adquirido. Así pues estamos muy contentos con la realización de este trabajo, pese a los resultados que se han quedado ''a medias''.
+
+\subsection{Trabajo futuro}
+Siendo que ha sido un trabajo cuyos resultados no son satisfactorios del todo, pensamos que hay muchas formas de extender este proyecto en el futuro. Pensamos que pueden idearse modificaciones en la compleja arquitectura ofrecida para que trabaje mejor sobre imágenes ''no fotorrealistas''. A su vez, a partir de la construcción de este proyecto hemos pensado que sería de gran interés el desarrollo de una nueva métrica que tenga en consideración el ámbito de la colorización de imágenes, que es muy concreto y parece no estar del todo bien definido, puesto la mayoría de métricas se centran en el ámbito ''estructural'' de la imagen, y no en el color.
 
 \section{Autoevaluación}
 

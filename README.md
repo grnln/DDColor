@@ -33,7 +33,7 @@ Finalmente, trabajamos también sobre una interfaz gráfica que permita usar el 
 ### Instalación con Conda (Recomendado)
 
 ```
-conda create -n ddcolor python=3.9
+conda create -n ddcolor python=3.10
 conda activate ddcolor
 pip install torch==2.2.0 torchvision==0.17.0 --index-url https://download.pytorch.org/whl/cu118
 
