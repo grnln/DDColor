@@ -900,21 +900,132 @@ Si algún fichero de pesos no está disponible al arrancar, la aplicación entra
 Tras cada colorización, la aplicación calcula automáticamente las tres métricas para cada modelo activo, usando la imagen de entrada como ground truth por defecto. El usuario puede cargar una imagen de referencia alternativa mediante el botón \textit{Abrir GT (opcional)}. Los resultados se presentan en la pestaña \textit{Métricas} en una tabla comparativa donde el mejor valor de cada fila se resalta en verde.
 
 \section{Experimentación}
+En esta sección veremos los resultados que ofrece el modelo que ha sido entrenado por nosotros con imágenes de cómic. Por tanto haremos una comparación entre esos resultados, y aquellos que devuelven tanto el modelo original de DDColor, como otro de los modelos que ofrecían en el ''ModelZoo'' llamado DDColor Artistic, que presume de haber sido entrenado con ''numerosas imágenes artísticas de alta calidad.'' \cite{DDColor}
 
-En este sección se verán los resultados realizados sobre la colorización de un total de 10 imágenes distintas, referidas al dominio no fotorrealista. Cada imagen ha sido coloreada usando, no solo nuestro modelo, sino tambien el modelo DDColor ''modelscope'' que es el que usan en el paper, asi como DDColor ``artistic``, un modelo que fue entrenado con datasets de arte (pero referido a pintura). 
+A su vez, veremos también que resultados nos lanzan las métricas utilizadas. Veremos los valores de las métricas para cada imagen colorizada, así como los valores promedio según el uso de cada modelo. 
+
+
+\subsection{Resultados visuales}
 
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=\textwidth]{../assets/images/composicion2.jpg}
-	\caption{Comparacion imagenes con distintos modelos}
+	\caption{Comparación de imágenes con distintos modelos}
 	\label{fig:comparacion2}
 \end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth]{../assets/images/composicion_pokemon.jpg}
+	\caption{Comparación de la imagen pokemon.jpg}
+	\label{fig:pokemon}
+\end{figure}
+
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=\textwidth]{../assets/images/composicion.jpg}
-	\caption{Comparacion imagenes con distintos modelos}
+	\caption{Comparación de imágenes con distintos modelos}
 	\label{fig:comparacion1}
 \end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth]{../assets/images/composicion_tintin.jpg}
+	\caption{Comparación de la imagen tintin.jpg}
+	\label{fig:tintin}
+\end{figure}
+
+\subsection{Resultados métricas}
+
+\begin{table}[ht]
+	\centering
+	\begin{tabular}{lcc}
+		\hline
+		\textbf{Imagen} & \textbf{Delta\_CF} & \textbf{Delta\_E2000} \\
+		\hline
+		absolute\_batman.jpg      & 12.6877 & 18.8367 \\
+		akira.jpg                 & 1.6714  & 12.8701 \\
+		asterix\_1.jpg            & 57.1921 & 19.2883 \\
+		asterix\_2.jpg            & 10.0734 & 13.2037 \\
+		lucky\_luke\_1.jpg        & 16.1075 & 22.8637 \\
+		lucky\_luke\_2.jpeg       & 30.1830 & 41.6858 \\
+		marvel.jpg                & 2.7689  & 12.9357 \\
+		marvel\_avengers.jpg      & 29.6384 & 16.2720 \\
+		marvel\_new\_champions.jpg & 4.0098 & 23.0563 \\
+		mortadelo.jpg             & 23.6520 & 17.4882 \\
+		one\_piece.jpg            & 20.9205 & 18.2296 \\
+		pokemon.jpg               & 11.4864 & 17.2045 \\
+		tintin.jpg                & 20.6314 & 20.6781 \\
+		tintin\_2.jpg             & 27.4635 & 14.7820 \\
+		tintin\_3.jpg             & 19.6596 & 19.1067 \\
+		\hline
+		\textbf{Promedio} & \textbf{19.2097} & \textbf{19.2334} \\
+		\hline
+	\end{tabular}
+	\caption{Resultados de métricas usando modelo DDColor realistic}
+	\label{tab:resultados_realistic}
+\end{table}
+
+
+\begin{table}[ht]
+	\centering
+	\begin{tabular}{lcc}
+		\hline
+		\textbf{Imagen} & \textbf{Delta\_CF} & \textbf{Delta\_E2000} \\
+		\hline
+		absolute\_batman.jpg      & 0.6400  & 19.4613 \\
+		akira.jpg                 & 16.5826 & 16.3843 \\
+		asterix\_1.jpg            & 28.6617 & 17.7935 \\
+		asterix\_2.jpg            & 6.1184  & 12.3409 \\
+		lucky\_luke\_1.jpg        & 54.6577 & 23.8961 \\
+		lucky\_luke\_2.jpeg       & 50.4951 & 39.8653 \\
+		marvel.jpg                & 18.0748 & 12.6284 \\
+		marvel\_avengers.jpg      & 10.9533 & 16.1225 \\
+		marvel\_new\_champions.jpg & 15.3220 & 20.6679 \\
+		mortadelo.jpg             & 14.3198 & 20.2673 \\
+		one\_piece.jpg            & 4.7892  & 16.9771 \\
+		pokemon.jpg               & 38.0417 & 18.1276 \\
+		tintin.jpg                & 5.8026  & 20.2616 \\
+		tintin\_2.jpg             & 10.9177 & 12.0169 \\
+		tintin\_3.jpg             & 32.2647 & 16.9472 \\
+		\hline
+		\textbf{Promedio} & \textbf{20.5094} & \textbf{18.9172} \\
+		\hline
+	\end{tabular}
+	\caption{Resultados de métricas usando modelo DDColor Artistic}
+	\label{tab:resultados_artistic}
+\end{table}
+
+\begin{table}[ht]
+	\centering
+	\begin{tabular}{lcc}
+		\hline
+		\textbf{Imagen} & \textbf{Delta\_CF} & \textbf{Delta\_E2000} \\
+		\hline
+		absolute\_batman.jpg      & 28.3604 & 20.6365 \\
+		akira.jpg                 & 14.5903 & 14.3037 \\
+		asterix\_1.jpg            & 36.4340 & 19.3714 \\
+		asterix\_2.jpg            & 0.2364  & 17.4624 \\
+		lucky\_luke\_1.jpg        & 28.6139 & 23.5374 \\
+		lucky\_luke\_2.jpeg       & 6.0687  & 26.0178 \\
+		marvel.jpg                & 0.9691  & 12.4482 \\
+		marvel\_avengers.jpg      & 3.0104  & 15.3390 \\
+		marvel\_new\_champions.jpg & 11.8843 & 16.8584 \\
+		mortadelo.jpg             & 21.5674 & 14.5700 \\
+		one\_piece.jpg            & 7.7651  & 13.5605 \\
+		pokemon.jpg               & 21.6295 & 16.7241 \\
+		tintin.jpg                & 18.6748 & 26.5748 \\
+		tintin\_2.jpg             & 19.2296 & 18.5369 \\
+		tintin\_3.jpg             & 4.8448  & 17.5258 \\
+		\hline
+		\textbf{Promedio} & \textbf{14.9253} & \textbf{18.2318} \\
+		\hline
+	\end{tabular}
+	\caption{Resultados de métricas usando nuestro modelo}
+	\label{tab:resultados_comic}
+\end{table}
+
+\clearpage
 
 \section{Manual de usuario}
 
@@ -1190,10 +1301,25 @@ Teniendo en cuenta el ejercicio de experimentación y el trabajo realizado, hemo
 
 \subsection{Resultados obtenidos}
 
-Hablemos en primer lugar de los resultados en base al modelo que nosotros hemos entrenado. Viendo el apartado de ''Experimentación'' podemos concluir lo siguiente: Si bien existe una clara mejoría en la colorización de muchas de las páginas y portadas de cómics coloreadas (en comparación con los modelos ya propuestos originalmente por DDColor), no podemos ni de lejos admitir que se tratan de buenas colorizaciones. Es decir, \textbf{creemos que pocas de las imágenes resultantes podrían engañar a algún humano a la hora de elegir cuál se trata de la verdadera y cuál es la coloreada por nuestro modelo.} Eso no ocurría con las imágenes fotorrealistas de DDColor, que aseguraban ser (y con razón) el ''state-of-art'' de colorización automática. \cite{DDColor}. 
+Hablemos en primer lugar de los resultados en base al modelo que nosotros hemos entrenado. Viendo el apartado de ''Experimentación'' podemos concluir lo siguiente: Si bien existe algún que otro caso concreto donde se pueda notar una clara mejoría en la colorización de las páginas y portadas de cómics coloreadas (en comparación con los modelos ya propuestos originalmente por DDColor), no podemos ni de lejos admitir que se tratan de buenas colorizaciones. Es decir, \textbf{creemos que ninguna de las imágenes resultantes podrían engañar a ningún humano a la hora de discernir cuál se trata de la verdadera y cuál es la coloreada por nuestro modelo.} Eso no ocurría con las imágenes fotorrealistas de DDColor, que aseguraban ser (y con razón) el ''state-of-art'' de colorización automática. \cite{DDColor}. 
+
+Para esto, veamos el caso de Tintín, expuesto en el apartado de colorización \ref{fig:tintin}. A simple vista nuestro modelo parece discernir mejor algún que otro elemento de la imagen (Véase el cielo, o el recuadro donde pone ''TINTÍN Y LOS PICAROS'', que es de un color uniforme, como en el original). Sin embargo está muy lejos de ser una buena colorización. 
+
+Los problemas principales a la hora de colorizar estas imágenes de cómic son:
+
+\begin{itemize}
+	\item Predominancia del rojo y el azul sobre el resto de colores.
+	\item Manchas y ruidos en forma de degradado de distintos colores.
+	\item Malas interpretaciones cuando se tratan colores planos.
+\end{itemize}
 
 \medskip
-Podríamos pensar que el problema se solucionaría entrenando más y mejor al modelo, con más datos de forma que aprenda más. Pero creemos que el problema es mayor. La arquitectura y la forma en la que está construido DDcolor nos hace dilucidar que no trabaja bien en este dominio porque \textbf{no está preparado para ello}. Las color queries son mucho más complicadas de abstraer cuando nos referimos a cómics.
+Podríamos pensar que estos problemas se solucionarían entrenando más y mejor al modelo, con más datos de forma que aprenda más. Pero creemos que el problema es mayor. La arquitectura y la forma en la que está construido DDcolor nos hace dilucidar que no trabaja bien en este dominio porque \textbf{no está preparado para ello}. Las color queries son mucho más complicadas de abstraer cuando nos referimos a cómics.
+
+\medskip
+Por otro lado, si bien alguno de los resultados nuestros son mejores a simple vista, ocurre también que el resto de modelos a veces nos sobrepasa con bastante ventaja. Para ello, puede verse el caso de Batman [\ref{fig:comparacion1}] donde la performance de nuestro modelo deja mucho que desear.
+
+Podemos imaginar, que en estilos artísticos donde las sombras y volúmenes sean mas realistas (en lugar de predominar la planaridad), los resultados de los modelos anteriores tendrán un buen desempeño, puesto que se acerca más a la realidad con la que han sido entrenados.
 
 \medskip
 Una conclusión que sacamos de esto (aunque en cierta medida era imaginable desde el principio), es que el dominio ''no fotorrealista'' es más complejo que el dominio ''fotorrealista'' en tanto y en cuanto hay tantos estilos gráficos como artistas dedicados a ello. Es decir, la realidad es más determinista. Es más concisa, sabes \textit{por donde va a salir}, es más esperable, pues todo sigue una lógica natural. Pero cuando hablamos de ilustraciones humanas, las reglas del juego cambian por completo. Las sombras no tienen porque comportarse de una forma determinada, ni los volúmenes, ni los contornos, ni los colores. Todo queda supeditado a quien sea la persona que lo ha imaginado.
@@ -1208,13 +1334,20 @@ Lo que queremos decir es que todos estos elementos pueden llegar a compararse. Y
 
 Sin embargo existen mil tipo de entidades que pueden ser de colores diferentes, pero mantener la lógica. La prenda de un personaje, su camiseta por ejemplo, puede ser roja, verde, azul... y no debería penalizarse el que difiera con el original. Que sea de otro color no indica que esté ''mal'' colorizado. 
 
-Lo que verdaderamente indica una mala colorización son los ruidos de colores que aparecen en los resultados. Esas manchas que se extienden sin aparente sentido, provocado por el funcionamiento de las color queries. Y ese nivel de percepción no es captado por las métricas utilizadas.
+
+Para ver esto podemos fijarnos en el ejemplo de Pokemón [ \ref{fig:pokemon}]. Los resultados que ofrecen tanto el modelo Artistic, como el modelo Realistic son considerablemente mejores que el de nuestro modelo, que parece haber pintado todo de rojo sin más. Pero si nos fijamos en las métrica de Color Difference, el nuestro es el mejor valorado. Ofreciendo una puntuación de 16.72  [\ref{tab:resultados_comic}] sobre 18.12 [\ref{tab:resultados_artistic}] y 17.20 [\ref{tab:resultados_realistic}]. ¿Por qué ocurre esto? Los otros dos modelos han coloreado diferente el fondo, por lo que no coincide tanto con el original. Pero como decimos, no se ve mal, puesto el fondo podría ser de cualquier color ya que no es nada determinista. Y el fondo ocupa bastante espacio de la imagen. Eso ha dado ventaja a nuestro modelo sobre los otros dos, pese no tener sentido.
+
+
+Lo que verdaderamente debería indicar una mala colorización no son las comparaciones bajo una imagen ''original'', sino son los ruidos de colores que aparecen en los resultados. Esas manchas que se extienden sin aparente sentido, provocado por el funcionamiento de las color queries. Y ese nivel de percepción no es captado por las métricas utilizadas.
 
 \subsection{Objetivos alcanzados}
 
 Una vez visto el resultado general del proyecto nos quedamos con un sentimiento agridulce. Por un lado resulta evidente que los objetivos que pretendíamos alcanzar se han quedado algo por atrás. Si bien hemos intentado poner remedio a la colorización de dominios ''no-fotorrealistas'', no hemos tenido todo el éxito que nos gustaría con el entrenamiento de nuestro modelo. También creemos haber ''menospreciado'' el problema en un principio, y luego ha resultado ser mucho más complejo de lo que nos podíamos imaginar. Razón por la cual no hemos podido analizar la limitación de transparencias.
 
 Sin embargo y pese a todas estas complicaciones nos sentimos profundamente orgulloso del trabajo realizado, ya que el proyecto ha supuesto un proceso de aprendizaje de gran valor académico para cada uno de los integrantes del grupo. Y si bien la implementación ha sido algo frustrada, creemos que los resultados negativos no son un buen indicador de la cantidad de conocimiento adquirido. Así pues estamos muy contentos con la realización de este trabajo, pese a los resultados que se han quedado ''a medias''.
+
+\subsection{Trabajo futuro}
+Siendo que ha sido un trabajo cuyos resultados no son satisfactorios del todo, pensamos que hay muchas formas de extender este proyecto en el futuro. Pensamos que pueden idearse modificaciones en la compleja arquitectura ofrecida para que trabaje mejor sobre imágenes ''no fotorrealistas''. A su vez, a partir de la construcción de este proyecto hemos pensado que sería de gran interés el desarrollo de una nueva métrica que tenga en consideración el ámbito de la colorización de imágenes, que es muy concreto y parece no estar del todo bien definido, puesto la mayoría de métricas se centran en el ámbito ''estructural'' de la imagen, y no en el color.
 
 \section{Autoevaluación}
 En esta sección cada integrante del grupo detalla la puntuación para el trabajo que se considera justa en cada apartado de una rúbrica proporcionada por el profesorado. 
