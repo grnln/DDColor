@@ -47,9 +47,9 @@ Para ello, fue necesario realizar un análisis en profundidad de la arquitectura
 
 \section{Planteamiento teórico}
 
-El problema que busca resolver DDColor es el de la colorización de imágenes en escala de grises, el cual ha visto múltiples soluciones tanto manuales como en forma de algoritmos de procesamiento de imágenes digitales.
+El problema que busca resolver DDColor es el de la colorización de imágenes en escala de grises \cite{DDColor}, el cual ha visto múltiples soluciones tanto manuales como en forma de algoritmos de procesamiento de imágenes digitales.
 
-El novedoso método del proyecto DDColor consiste en una red neuronal que emplea una arquitectura \textit{encoder-decoder} \cite{IBMEncoderDecoder}.
+El novedoso método del proyecto DDColor consiste en una red neuronal que emplea una arquitectura \textit{encoder-decoder} \cite{DDColor, IBMEncoderDecoder}.
 
 \begin{figure}[H]
 	\centering
@@ -58,13 +58,13 @@ El novedoso método del proyecto DDColor consiste en una red neuronal que emplea
 	\label{fig:estructura}
 \end{figure}
 
-Para la colorización, esta red emplea el modelo de color \textit{CIELAB}. De esta manera:
+Para la colorización, esta red emplea el modelo de color \textit{CIELAB}. De esta manera, tal como se explica en \cite{DDColor}:
 \begin{itemize}
   \item{La imagen original (en escala de grises) es tratada como el canal \textit{L} en dicho modelo de color (correspondiente a la luminancia).}
   \item{La función de la red es hallar los canales \textit{A} y \textit{B} (correspondientes a la crominancia).}
 \end{itemize}
 
-La red DDColor realiza los siguientes procesos:
+La red DDColor realiza los siguientes procesos \cite{DDColor}:
 
 \begin{enumerate}
   \item{Extracción de información semántica de los contenidos de la imagen (\textbf{encoder}).}
@@ -77,39 +77,39 @@ A continuación, se detallarán ambas partes de la arquitectura \textit{encoder-
 
 \subsection{Encoder}
 
-La función del \textit{encoder} es convertir los datos de entrada a una representación vectorial. En el caso de la red DDColor, consiste en un modelo preentrenado, en este caso especializado en la clasificación de imágenes, encargado de la extracción de características semánticas de la imagen fuente.
+La función del \textit{encoder} es convertir los datos de entrada a una representación vectorial \cite{IBMEncoderDecoder}. En el caso de la red DDColor, consiste en un modelo preentrenado \cite{DDColor}, en este caso especializado en la clasificación de imágenes, encargado de la extracción de características semánticas de la imagen fuente.
 
 \subsubsection{ConvNeXT}
 
 El \textit{encoder} del proyecto DDColor es el modelo ConvNeXT \cite{ConvNeXT}, una red convolucional capaz de extraer una serie de mapas de características a distintas resoluciones (fracciones de la resolución original) que conforman una representación jerárquica de los contenidos de la imagen.
 
-Dicho modelo surge como alternativa a los Vision Transformers (ViT) \cite{ViT}, introducidos como una aplicación de las arquitecturas basadas en \textit{transformers} (empleadas habitualmente en tareas de procesamiento de lenguaje natural) a la clasificación de imágenes, aplicación en la que tradicionalmente se habían empleado redes convolucionales.
+Dicho modelo surge como alternativa a los Vision Transformers (ViT) \cite{ConvNeXT, ViT}, introducidos como una aplicación de las arquitecturas basadas en \textit{transformers} \cite{Attention} (empleadas habitualmente en tareas de procesamiento de lenguaje natural) a la clasificación de imágenes, aplicación en la que tradicionalmente se habían empleado redes convolucionales.
 
-Así, ConvNeXT introduce ideas originalmente presentadas en los Vision Transformers en una red puramente convolucional, combinando la mayor precisión ofrecida por éstos con la mayor eficiencia y sencillez de una red convolucional tradicional.
+Así, ConvNeXT introduce ideas originalmente presentadas en los Vision Transformers en una red puramente convolucional, combinando la mayor precisión ofrecida por éstos con la mayor eficiencia y sencillez de una red convolucional tradicional \cite{ConvNeXT}.
 
-La arquitectura de ConvNeXT es la siguiente:
+La arquitectura de ConvNeXT es la siguiente (descrita en \cite{ConvNeXT}):
 
 \begin{enumerate}
   \item{Capa de convolución con un kernel de tamaño 4x4 (\textit{patchify}).}
   \item{Cuatro ``stages'', cada uno con un número configurable de bloques con la misma estructura:}
   \begin{enumerate}
     \item{Capa de convolución \textit{depthwise} (se aplica la misma convolución a cada canal de la imagen por separado) con kernel de tamaño 7x7.}
-    \item{Capa de normalización \textit{LayerNorm}.}
+    \item{Capa de normalización \textit{LayerNorm} \cite{LayerNorm}.}
     \item{Capa de convolución con kernel de tamaño 1x1.}
-    \item{Función de activación GELU (\textit{Gaussian Error Linear Unit}, similar a ReLU).}
+    \item{Función de activación GELU (\textit{Gaussian Error Linear Unit} \cite{GELU}, similar a ReLU \cite{ReLU}).}
     \item{Capa de convolución con kernel de tamaño 1x1.}
   \end{enumerate}
 \end{enumerate}
 
-De todo este proceso, es importante la inclusión de una capa de \textit{patchify}, la cual es una de las ideas introducidas en los Vision Transformers.
+De todo este proceso, es importante la inclusión de una capa de \textit{patchify}, la cual es una de las ideas introducidas en los Vision Transformers \cite{ConvNeXT,ViT}.
 
-Esta capa se sitúa al inicio de la red, en lo que se denomina la \textit{stem cell} (encargada de procesar las imágenes al inicio para después ser tratadas por el resto de la red).
+Esta capa se sitúa al inicio de la red, en lo que se denomina la \textit{stem cell} (encargada de procesar las imágenes al inicio para después ser tratadas por el resto de la red) \cite{ConvNeXT}.
 
 Su función es transformar la imagen en una serie de \textit{patches} (en el caso de esta red, mediante una convolución de 4x4). De esta manera, la secuencia de \textit{patches} generados en base a la imagen se emplearía como secuencia de entrada en un Vision Transformers (al estar las arquitecturas basadas en transformers especializadas en el procesamiento de secuencias).
 
-Dicha capa se aplicó en ConvNeXT al comprobarse experimentalmente que mejoraba la precisión del modelo en comparación con las \textit{stem cells} empleadas en redes convolucionales convencionales.
+Dicha capa se aplicó en ConvNeXT al comprobarse experimentalmente que mejoraba la precisión del modelo en comparación con las \textit{stem cells} empleadas en redes convolucionales convencionales \cite{ConvNeXT}.
 
-Dependiendo del número de bloques y de canales en cada ``stage'', se distinguen múltiples variantes:
+Dependiendo del número de bloques y de canales en cada ``stage'', se distinguen múltiples variantes \cite{ConvNeXT}:
 
 \begin{itemize}
   \item{ConvNeXT-T}
@@ -119,19 +119,19 @@ Dependiendo del número de bloques y de canales en cada ``stage'', se distinguen
   \item{ConvNeXT-XL}
 \end{itemize}
 
-En DDColor se utilizan las variantes ConvNeXT-T y ConvNeXT-L.
+En DDColor se utilizan las variantes ConvNeXT-T y ConvNeXT-L \cite{DDColorRepo}.
 
 \subsection{Decoder}
 
-El propósito del \textit{decoder} es convertir la salida vectorial del \textit{encoder} a una representación del mismo tipo que la inicial (en el caso de \textit{DDColor}, una imagen).
+El propósito del \textit{decoder} es convertir la salida vectorial del \textit{encoder} a una representación del mismo tipo que la inicial \cite{IBMEncoderDecoder} (en el caso de \textit{DDColor}, una imagen).
 
-La arquitectura de DDColor comprende dos \textit{decoders} que trabajan simultáneamente (llamados \textit{pixel decoder} y \textit{colour decoder}).
+La arquitectura de DDColor comprende dos \textit{decoders} que trabajan simultáneamente (llamados \textit{pixel decoder} y \textit{colour decoder}) \cite{DDColor}.
 
 \subsubsection{Pixel decoder}
 
-Este decodificador emplea capas \textit{PixelShuffle} \cite{PixelShuffle} para reescalar los mapas de características producidos por el \textit{encoder} de vuelta a la resolución de la imagen fuente.
+Este decodificador emplea capas \textit{PixelShuffle} \cite{PixelShuffle} para reescalar los mapas de características producidos por el \textit{encoder} de vuelta a la resolución de la imagen fuente \cite{DDColor}.
 
-Cada capa \textit{PixelShuffle} contiene una secuencia de \textit{L} capas convolucionales, con la siguiente forma:
+Cada capa \textit{PixelShuffle} contiene una secuencia de \textit{L} capas convolucionales, con la siguiente forma \cite{PixelShuffle}:
 
 \begin{enumerate}
   \item{\textit{L-1} operaciones de convolución entre un kernel (matriz de pesos que se ajustan en el proceso de aprendizaje) y el resultado de la anterior capa (o la imagen fuente, en el caso de la primera capa).}
@@ -140,26 +140,26 @@ Cada capa \textit{PixelShuffle} contiene una secuencia de \textit{L} capas convo
 
 \subsubsection{Colour decoder}
 
-Este decodificador emplea una arquitectura basada en la arquitectura de un \textit{transformer}, es decir, empleando mecanismos de atención, para refinar \textit{colour queries}.
+Este decodificador emplea una arquitectura basada en la arquitectura de un \textit{transformer}, es decir, empleando mecanismos de atención, para refinar \textit{colour queries} \cite{DDColor}.
 
-Dichas \textit{colour queries} son embeddings que indican el color de las distintas características de la imagen.
+Dichas \textit{colour queries} son \textit{embeddings} (es decir, representaciones vectoriales de objetos no numéricos \cite{IBMEmbedding}) que indican el color de las distintas características de la imagen \cite{DDColor}.
 
-Para ello, se crean una serie de CDBs (\textit{Colour Decoder Blocks}), uno para cada mapa de características generado en el \textit{encoder}, los cuales procesan las \textit{colour queries} secuencialmente.
+Para ello, se crean una serie de CDBs (\textit{Colour Decoder Blocks}), uno para cada mapa de características generado en el \textit{encoder}, los cuales procesan las \textit{colour queries} secuencialmente \cite{DDColor}.
 
-Cada CDB produce una salida (una \textit{colour query} refinada) en base a dos entradas:
+Cada CDB produce una salida (una \textit{colour query} refinada) en base a dos entradas \cite{DDColor}:
 
 \begin{itemize}
   \item{Mapa de características generado por el encoder.}
   \item{\textit{Colour query} a refinar.}
 \end{itemize}
 
-La \textit{colour query} inicial (la empleada como entrada del primer CDB de la secuencia) está inicializada al embedding nulo. El resto de CDBs emplean la \textit{colour query} refinada por el anterior CDB.
+La \textit{colour query} inicial (la empleada como entrada del primer CDB de la secuencia) está inicializada al embedding nulo \cite{DDColor}. El resto de CDBs emplean la \textit{colour query} refinada por el anterior CDB \cite{DDColor}.
 
 Antes de proceder con las operaciones realizadas dentro de cada CDB, se explicarán brevemente los mecanismos de atención empleados.
 
 \paragraph{Mecanismos de atención y transformers}
 
-Los mecanismos de atención tienen tres características principales \cite{IBMAttention}:
+Los mecanismos de atención \cite{Attention} tienen tres características principales (según \cite{IBMAttention}):
 
 \begin{enumerate}
   \item{Leen \textbf{secuencias de datos} y las transforman en \textit{embeddings} vectoriales.}
@@ -167,7 +167,7 @@ Los mecanismos de atención tienen tres características principales \cite{IBMAt
   \item{Implementan algún proceso para \textbf{influir en las predicciones del modelo} mediante los pesos de atención.}
 \end{enumerate}
 
-En los mecanismos de atención, para cada elemento de la secuencia, se distinguen tres conceptos fundamentales:
+En los mecanismos de atención, para cada elemento de la secuencia, se distinguen tres conceptos fundamentales \cite{IBMAttention}:
 
 \begin{itemize}
   \item{\textbf{Query}: Vector que representa la información buscada por el elemento.}
@@ -175,7 +175,7 @@ En los mecanismos de atención, para cada elemento de la secuencia, se distingue
   \item{\textbf{Value}: Vector que contiene la información del elemento, ponderada empleando los pesos de atención.}
 \end{itemize}
 
-La fórmula general de un mecanismo de atención es la siguiente \cite{Attention}:
+La fórmula general de un mecanismo de atención es la siguiente (según \cite{Attention}):
 
 \centerline{$Attention(Q, K, V) = softmax(\frac{QK^T}{\sqrt{d_k}})V$}
 
@@ -189,13 +189,13 @@ Donde:
 En el contexto de DDColor, se emplean dos tipos de atención:
 
 \begin{itemize}
-  \item{\textbf{Atención cruzada}: Las \textit{queries} y las \textit{keys} provienen de fuentes distintas.}
-  \item{\textbf{Autoatención}: Las \textit{queries} y las \textit{keys} proceden de la misma fuente. En DDColor, se emplea la \textit{multi-head attention}, en la que cada dimensión de la entrada se procesa por separado \cite{Attention}.}
+  \item{\textbf{Atención cruzada}: Las \textit{queries} y las \textit{keys} provienen de fuentes distintas \cite{IBMAttention}.}
+  \item{\textbf{Autoatención}: Las \textit{queries} y las \textit{keys} proceden de la misma fuente \cite{IBMAttention}. En DDColor, se emplea la \textit{multi-head attention}, en la que cada dimensión de la entrada se procesa por separado \cite{Attention}.}
 \end{itemize}
 
 Los mecanismos de atención son la base de los transformers, definidos en \cite{Attention}.
 
-Éstos siguen también un patrón \textit{encoder-decoder}:
+Éstos siguen también un patrón \textit{encoder-decoder} \cite{Attention}:
 
 \begin{itemize}
   \item{El \textit{encoder} consta de 6 capas, cada una con la siguiente arquitectura \cite{Attention}:
@@ -217,7 +217,7 @@ Los mecanismos de atención son la base de los transformers, definidos en \cite{
 
 Posteriormente, el resultado del \textit{decoder} se procesa mediante una capa lineal y una función de activación softmax \cite{Softmax}.
 
-Así, las operaciones realizadas en cada CDB son las siguientes:
+Así, las operaciones realizadas en cada CDB son las siguientes \cite{DDColor}:
 
 \begin{enumerate}
   \item{\textbf{Capa de atención cruzada} empleando el mapa de características como \textit{key} y \textit{value} y con la colour query como \textit{query}.}
@@ -233,11 +233,11 @@ Así, las operaciones realizadas en cada CDB son las siguientes:
   }
 \end{enumerate}
 
-Entre cada par de capas, se aplica una capa de normalización. Además, en cada capa de normalización se suma el resultado de la anterior capa de normalización (funcionando así además como capas residuales).
+Entre cada par de capas, se aplica una capa de normalización. Además, en cada capa de normalización se suma el resultado de la anterior capa de normalización (funcionando así además como capas residuales) \cite{DDColor}.
 
 \subsection{Fusión}
 
-Tras el \textit{encoder} y el \textit{decoder}, la red DDColor contiene el denominado \textit{fusion module}, el cual realiza las siguientes operaciones:
+Tras el \textit{encoder} y el \textit{decoder}, la red DDColor contiene el denominado \textit{fusion module}, el cual realiza las siguientes operaciones \cite{DDColor}:
 
 \begin{enumerate}
   \item{Mediante un producto escalar, combinación del \textit{embedding} producido por el \textit{Pixel decoder} y el producido por el \textit{Colour decoder}.}
@@ -529,39 +529,39 @@ Valores bajos de $\Delta E_{2000}$ indican diferencias apenas perceptibles, mien
 
 \section{Implementación}
 
-Para este proyecto, se realizó un \textit{fork} del repositorio de GitHub en el que reside la implementación de la red DDColor:
+Para este proyecto, se realizó un \textit{fork} del repositorio de GitHub en el que reside la implementación de la red DDColor \cite{DDColorRepo}:
 
 \begin{itemize}
   \item{Repositorio original: \url{https://github.com/piddnad/DDColor}.}
   \item{\textit{Fork} realizado para el proyecto: \url{https://github.com/grnln/DDColor}.}
 \end{itemize}
 
-La red en cuestión fue implementada en \href{https://www.python.org/}{Python}, empleando principalmente las librerías \href{https://pytorch.org/}{PyTorch} (\textit{framework} para la implementación de redes neuronales) y \href{https://numpy.org/}{NumPy} (librería especializada en la implementación de operaciones matemáticas de forma vectorial).
+La red en cuestión fue implementada en \href{https://www.python.org/}{Python} \cite{Python}, empleando principalmente las librerías \href{https://pytorch.org/}{PyTorch} \cite{PyTorch} (\textit{framework} para la implementación de redes neuronales) y \href{https://numpy.org/}{NumPy} \cite{NumPy} (librería especializada en la implementación de operaciones matemáticas de forma vectorial).
 
 Asimismo, se emplean otras librerías en el proyecto:
 
 \begin{itemize}
-  \item{\href{https://opencv.org/}{OpenCV}: Implementa múltiples operaciones de visión por ordenador.}
-  \item{\href{https://pillow.readthedocs.io/en/stable/}{Pillow}: Implementa operaciones de lectura y procesamiento de imágenes.}
-  \item{\href{https://tqdm.github.io/}{tqdm}: Implementa barras de progreso para aplicaciones de línea de comandos de forma sencilla.}
-  \item{\href{https://huggingface.co/}{HuggingFace}: Librería implementada por la comunidad de inteligencia artificial homónima para cargar modelos almacenados en su servicio web.}
-  \item{\href{https://pypi.org/project/onnx/}{ONNX}: Librería para gestionar redes neuronales en formato ONNX (\textit{Open Neural Network eXchange}).}
+  \item{\href{https://opencv.org/}{OpenCV} \cite{OpenCV}: Implementa múltiples operaciones de visión por ordenador.}
+  \item{\href{https://pillow.readthedocs.io/en/stable/}{Pillow} \cite{Pillow}: Implementa operaciones de lectura y procesamiento de imágenes.}
+  \item{\href{https://tqdm.github.io/}{tqdm} \cite{TQDM}: Implementa barras de progreso para aplicaciones de línea de comandos de forma sencilla.}
+  \item{\href{https://huggingface.co/}{HuggingFace} \cite{HuggingFace}: Librería implementada por la comunidad de inteligencia artificial homónima para cargar modelos almacenados en su servicio web.}
+  \item{\href{https://pypi.org/project/onnx/}{ONNX} \cite{ONNX}: Librería para gestionar redes neuronales en formato ONNX (\textit{Open Neural Network eXchange}).}
 \end{itemize}
 
 Por último, el proceso de entrenamiento de la red también requiere las siguientes dependencias:
 
 \begin{itemize}
-  \item{\href{https://pyyaml.org/}{PyYAML}: Implementa operaciones de gestión de ficheros en formato YAML en Python.}
-  \item{\href{https://scipy.org/}{SciPy}: Implementa algoritmos para computación científica.}
-  \item{\href{https://www.tensorflow.org/tensorboard}{TensorBoard}: Implementa herramientas de visualización para la experimentación de machine learning (parte del proyecto TensorFlow).}
-  \item{\href{https://wandb.ai/site/}{Weights \& Biases}: Implementa un \textit{framework} para gestionar modelos de inteligencia artificial.}
+  \item{\href{https://pyyaml.org/}{PyYAML} \cite{PyYAML}: Implementa operaciones de gestión de ficheros en formato YAML en Python.}
+  \item{\href{https://scipy.org/}{SciPy} \cite{SciPy}: Implementa algoritmos para computación científica.}
+  \item{\href{https://www.tensorflow.org/tensorboard}{TensorBoard} \cite{TensorBoard}: Implementa herramientas de visualización para la experimentación de machine learning (parte del proyecto TensorFlow).}
+  \item{\href{https://wandb.ai/site/}{Weights \& Biases} \cite{WandB}: Implementa un \textit{framework} para gestionar modelos de inteligencia artificial.}
 \end{itemize}
 
-El código está principalmente contenido en tres directorios del repositorio:
+El código está principalmente contenido en tres directorios del repositorio \cite{DDColorRepo}:
 
 \begin{itemize}
   \item{El directorio \texttt{ddcolor} contiene la implementación de la propia red DDColor.}
-  \item{El directorio \texttt{basicsr} contiene \href{https://github.com/xpixelgroup/basicsr}{BasicSR}, un conjunto de herramientas para la restauración de imagen y vídeo que es empleado por DDColor como \textit{framework} de entrenamiento. Este \textit{framework} es extendido por el repositorio, y contiene otra implementación de DDColor con algunas diferencias.}
+  \item{El directorio \texttt{basicsr} contiene \href{https://github.com/xpixelgroup/basicsr}{BasicSR} \cite{BasicSR}, un conjunto de herramientas para la restauración de imagen y vídeo que es empleado por DDColor como \textit{framework} de entrenamiento. Este \textit{framework} es extendido por el repositorio, y contiene otra implementación de DDColor con algunas diferencias.}
   \item{El directorio \texttt{scripts} contiene una serie de pequeños scripts, empleados para realizar varias tareas.}
 \end{itemize}
 
@@ -585,7 +585,7 @@ El modelo DDColor se implementa como tres módulos de Torch:
 \begin{itemize}
   \item{\texttt{DDColor}: Implementa la arquitectura de la red a alto nivel, invocando a los demás módulos internamente cuando sea necesario.}
   \item{\texttt{ImageEncoder}: Implementa la sección del \textit{encoder}, invocando a la red ConvNeXT (preentrenada) internamente.}
-  \item{\texttt{DuelDecoder}: Implementa la arquitectura de la sección del \textit{decoder} a alto nivel, invocando tanto a una versión customizada de PixelShuffle (\textit{pixel decoder}) como al módulo \texttt{MultiScaleColorDecoder} (\textit{colour decoder}) internamente.}
+  \item{\texttt{DuelDecoder}: Implementa la arquitectura de la sección del \textit{decoder} a alto nivel, invocando tanto a una versión customizada de PixelShuffle \cite{PixelShuffle} (\textit{pixel decoder}) como al módulo \texttt{MultiScaleColorDecoder} (\textit{colour decoder}) internamente.}
   \item{\texttt{MultiScaleColorDecoder}: Implementa la sección correspondiente al \textit{colour decoder}, implementando una arquitectura similar a un transformer.}
 \end{itemize}
 
@@ -624,11 +624,11 @@ El módulo se limita a instanciar ConvNeXT con los parámetros adecuados.
 
 En primer lugar, el nombre del \textit{encoder} actúa como un potencial punto de variabilidad del sistema, al teóricamente permitir conectar múltiples modelos diferentes a la red, mas la implementación lo restringe a solo dos posibles valores: \texttt{``convnext-t''} y \texttt{``convnext-l''}.
 
-De esta manera, este parámetro solo determina las ``profundidades'' del modelo ConvNeXT a instanciar, es decir, el número de bloques que habrá en cada \textit{stage} del modelo ConvNeXT instanciado.
+De esta manera, este parámetro solo determina las ``profundidades'' del modelo ConvNeXT a instanciar, es decir, el número de bloques que habrá en cada \textit{stage} del modelo ConvNeXT instanciado \cite{ConvNeXT}.
 
 Posteriormente, los \textit{hooks} se ajustan mediante una lista de cadenas de texto, y no son realmente configurables por el usuario de DDColor, sino que el módulo \texttt{DDColor} los ajusta manualmente al construir la instancia.
 
-En cuanto a su propósito, indican en qué puntos extraer el estado actual del mapa de características generado (lo cual es necesario para extraer los mapas de características a distintas resoluciones que se envían como \textit{shortcut connections} al \textit{colour decoder}).
+En cuanto a su propósito, indican en qué puntos extraer el estado actual del mapa de características generado (lo cual es necesario para extraer los mapas de características a distintas resoluciones que se envían como \textit{shortcut connections} al \textit{colour decoder} \cite{DDColor}). Su funcionamiento se explicará en la sección correspondiente a \texttt{BasicSR}.
 
 Cuando este módulo es invocado, invoca a la instancia de ConvNeXT construida.
 
@@ -637,8 +637,8 @@ Cuando este módulo es invocado, invoca a la instancia de ConvNeXT construida.
 Este módulo recibe como parámetro de entrada la lista de \textit{hooks} también introducida en el anterior módulo y actúa como un wrapper sobre los dos \textit{decoders} de la red:
 
 \begin{itemize}
-  \item{El \textit{pixel decoder}, implementado directamente en este módulo como una sucesión de capas PixelShuffle modificadas.}
-  \item{El \textit{colour decoder}, implementado en el módulo \texttt{MultiScaleColorDecoder}.}
+  \item{El \textit{pixel decoder} \cite{DDColor}, implementado directamente en este módulo como una sucesión de capas PixelShuffle \cite{PixelShuffle} modificadas.}
+  \item{El \textit{colour decoder} \cite{DDColor}, implementado en el módulo \texttt{MultiScaleColorDecoder}.}
 \end{itemize}
 
 Además, permite ajustar, entre otros, los siguientes parámetros:
@@ -728,9 +728,9 @@ A la hora de emplear la \textit{pipeline} en sí, se invoca al método \texttt{p
 
 \subsection{BasicSR}
 
-\texttt{BasicSR} es un \textit{framework} que contiene múltiples utilidades empleadas por el modelo DDColor. Además, como parte del repositorio DDColor, se extiende dicho framework incluyendo, entre otros, una implementación del propio DDColor.
+\texttt{BasicSR}\cite{BasicSR} es un \textit{framework} que contiene múltiples utilidades empleadas por el modelo DDColor. Además, como parte del repositorio DDColor, se extiende dicho framework incluyendo, entre otros, una implementación del propio DDColor.
 
-Este \textit{framework} está dividido en múltiples módulos:
+Este \textit{framework} está dividido en múltiples módulos \cite{BasicSR}:
 
 \begin{itemize}
   \item{\texttt{archs}: Almacena arquitecturas de modelos (incluyendo una implementación de DDColor), así como útiles para DDColor.}
@@ -787,7 +787,7 @@ Esta clase implementa un \textit{wrapper} sobre PixelShuffle, creando una capa q
 
 Así, esta clase primero introduce una capa convolucional ``custom'' (empleando \texttt{custom\_conv\_layer}), inicializando los pesos de la capa mediante ICNR \cite{ICNR}.
 
-El resultado de esta capa es después pasado por una función de activación ReLU, y posteriormente por la capa PixelShuffle en sí.
+El resultado de esta capa es después pasado por una función de activación ReLU \cite{ReLU}, y posteriormente por la capa PixelShuffle \cite{PixelShuffle} en sí.
 
 Posteriormente, se aplica un operador de ``padding'' al resultado (mediante replicación) y se aplica una capa de \textit{pooling} bidimensional \cite{TorchAvgPool2D}, la cual aplica un \textit{blur} a la imagen (reduciendo así los artefactos).
 
@@ -797,7 +797,7 @@ Esta clase implementa, para un determinado \textit{hook}, un bloque con la sigui
 
 \begin{enumerate}
   \item{Capa PixelShuffle ``custom''.}
-  \item{Capa BatchNorm2D \cite{TorchBatchNorm2D} (normalización) sobre el resultado almacenado en el \textit{hook}.}
+  \item{Capa BatchNorm2D \cite{BatchNorm,TorchBatchNorm2D} (normalización) sobre el resultado almacenado en el \textit{hook}.}
   \item{Función de activación ReLU sobre la concatenación de los dos resultados anteriores.}
   \item{Aplicación de una capa de convolución custom (\texttt{custom\_conv\_layer}) sobre el resultado anterior.}
 \end{enumerate}
@@ -819,7 +819,7 @@ Construye una secuencia con la siguiente estructura:
       \item{En caso de que no sea unidimensional, booleano indicando si trasponer la matriz.}
     \end{itemize}
   }
-  \item{\textbf{Opcionalmente}, una capa de activación ReLU.}
+  \item{\textbf{Opcionalmente}, una capa de activación ReLU \cite{ReLU}.}
   \item{\textbf{Opcionalmente}, una capa de normalización.}
   \item{\textbf{Opcionalmente}, una capa de autoatención.}
 \end{enumerate}
@@ -830,9 +830,9 @@ Implementación de la arquitectura del modelo ConvNeXT \cite{ConvNeXT} en PyTorc
 
 \paragraph{SelfAttentionLayer, CrossAttentionLayer, FFNLayer, MLP}
 
-\texttt{SelfAttentionLayer} y \texttt{CrossAttentionLayer} son implementaciones de capas de autoatención y atención cruzada, respectivamente \cite{Attention}.
+\texttt{SelfAttentionLayer} y \texttt{CrossAttentionLayer} son implementaciones de capas de autoatención y atención cruzada, respectivamente \cite{Attention}. Ambas emplean capas de \textit{multi-head attention} definidas en PyTorch.
 
-En cuanto a \texttt{FFNLayer}, éste implementa como módulo de PyTorch la arquitectura explicada en la sección del planteamiento teórico correspondiente a la red feed-forward encontrada al final de los CDBs.
+En cuanto a \texttt{FFNLayer}, éste implementa como módulo de PyTorch la arquitectura explicada en la sección del planteamiento teórico correspondiente a la red feed-forward encontrada al final de los CDBs \cite{DDColor}.
 
 \texttt{MLP}, por su parte, implementa la siguiente arquitectura:
 
@@ -844,7 +844,7 @@ En cuanto a \texttt{FFNLayer}, éste implementa como módulo de PyTorch la arqui
       \item{El resto de dimensiones (incluyendo las dimensiones de todas las capas escondidas) es otro parámetro configurable $n_h$.}
     \end{itemize}
   }
-  \item{Tras cada capa lineal, se aplica una función de activación ReLU.}
+  \item{Tras cada capa lineal, se aplica una función de activación ReLU \cite{ReLU}.}
 \end{itemize}
 
 \paragraph{PositionEmbeddingSine}
@@ -862,7 +862,7 @@ La versión encontrada en este repositorio está generalizada para su uso en im�
 
 \paragraph{Transformer}
 
-Como se indica al principio de la clase en un comentario, esta es una versión ligeramente modificada de la implementación de la arquitectura de \textit{transformers} de PyTorch.
+Como se indica al principio de la clase en un comentario, esta es una versión ligeramente modificada de la implementación de la arquitectura de \textit{transformers} \cite{Attention} de PyTorch.
 
 Se emplea en la implementación de DDColor de \texttt{BasicSR}, para el \texttt{SingleColorDecoder}.
 
@@ -872,6 +872,23 @@ Como cambios principales con respecto a un \textit{transformer} estándar:
   \item{La capa de normalización al final del \textit{encoder} se sustrae.}
   \item{El \textit{decoder} devuelve los resultados normalizados de todas las capas intermedias.}
   \item{A la capa de \textit{multi-head attention} encargada de procesar el resultado del \textit{encoder} se le introduce también la posición de cada elemento.}
+\end{itemize}
+
+\subsubsection{Implementación de DDColor}
+
+Las principales diferencias entre la implementación de DDColor encontrada en el directorio \texttt{ddcolor} y la implementada como extensión a \texttt{BasicSR} son las siguientes:
+
+\begin{itemize}
+  \item{La arquitectura se registra en el registro de arquitecturas de \texttt{BasicSR}.}
+  \item{\textbf{Clases renombradas}:
+    \begin{itemize}
+      \item{La clase \texttt{ImageEncoder} pasa a llamarse \texttt{Encoder}.}
+      \item{La clase \texttt{DuelDecoder} pasa a llamarse \texttt{Decoder}.}
+    \end{itemize}
+  }
+  \item{Las clases \texttt{Encoder} y \texttt{Decoder} pueden cargarse desde pesos preentrenados.}
+  \item{La clase \texttt{Encoder} permite emplear más variantes de ConvNeXT \cite{ConvNeXT}: \texttt{``convnext-t''}, \texttt{``convnext-s''}, \texttt{``convnext-b''} y \texttt{``convnext-l''}.}
+  \item{Se añade otro posible \textit{decoder}: el \texttt{SingleColorDecoder}, el cual aplica un \textit{transformer} \cite{Attention}.}
 \end{itemize}
 
 \subsubsection{Entrenamiento}
