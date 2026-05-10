@@ -23,8 +23,7 @@ investigación de las limitaciones del modelo.}
 \maketitle
 
 \begin{abstract}
- \noindent El resumen debe tener como máximo 250 palabras y ser un único párrafo. El resumen debe describir lo más fielmente posible el trabajo realizado (no el propuesto inicialmente, que podría ser distinto). 
- En esta plantilla se presentan las indicaciones para realizar el trabajo de PID, al mismo tiempo que la estructura que debe tener la documentación a presentar. 
+\noindent Este trabajo analiza y extiende el modelo de colorización automática DDColor, una red neuronal basada en arquitectura \textit{encoder-decoder} que opera en el espacio de color CIELAB. Se abordan dos líneas de trabajo: el reentrenamiento del modelo sobre un dataset de imágenes de cómic de 52.156 imágenes, y el estudio de las limitaciones resultantes en este dominio no fotorrealista. Los resultados muestran que, pese a mejoras puntuales, la arquitectura de DDColor presenta limitaciones estructurales para este tipo de imágenes, donde la ausencia de texturas fotorrealistas y la planaridad del color dificultan el proceso de colorización. Como complemento, se desarrolló \textit{DDColor Lab}, una aplicación de escritorio que permite comparar los tres modelos disponibles mediante las métricas $\Delta CF$ y $\Delta E_{2000}$.
 
 \hspace{1cm}
 
@@ -55,7 +54,7 @@ El novedoso método del proyecto DDColor consiste en una red neuronal que emplea
 
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=\textwidth]{./assets/network_arch.jpg}
+	\includegraphics[width=\textwidth]{../assets/network_arch.jpg}
 	\caption{Arquitectura general de DDColor}
 	\label{fig:estructura}
 \end{figure}
@@ -948,7 +947,7 @@ La segunda contribución es \textit{DDColor Lab}, una aplicación de escritorio 
 
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=\textwidth]{./assets/images/app_screen.jpg}
+	\includegraphics[width=\textwidth]{../assets/images/app_screen.jpg}
 	\caption{Aspecto visual de la aplicación de escritorio}
 	\label{fig:desktopapp}
 \end{figure}
@@ -989,28 +988,28 @@ A su vez, veremos también que resultados nos lanzan las métricas utilizadas. V
 
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=\textwidth]{./assets/images/composicion2.jpg}
+	\includegraphics[width=\textwidth]{../assets/images/composicion2.jpg}
 	\caption{Comparación de imágenes con distintos modelos}
 	\label{fig:comparacion2}
 \end{figure}
 
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=\textwidth]{./assets/images/composicion_pokemon.jpg}
+	\includegraphics[width=\textwidth]{../assets/images/composicion_pokemon.jpg}
 	\caption{Comparación de la imagen pokemon.jpg}
 	\label{fig:pokemon}
 \end{figure}
 
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=\textwidth]{./assets/images/composicion.jpg}
+	\includegraphics[width=\textwidth]{../assets/images/composicion.jpg}
 	\caption{Comparación de imágenes con distintos modelos}
 	\label{fig:comparacion1}
 \end{figure}
 
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=\textwidth]{./assets/images/composicion_tintin.jpg}
+	\includegraphics[width=\textwidth]{../assets/images/composicion_tintin.jpg}
 	\caption{Comparación de la imagen tintin.jpg}
 	\label{fig:tintin}
 \end{figure}
@@ -1111,38 +1110,133 @@ A su vez, veremos también que resultados nos lanzan las métricas utilizadas. V
 
 La aplicación \textit{DDColor Lab} es una herramienta de escritorio desarrollada en Python que permite colorizar imágenes en escala de grises mediante los modelos DDColor y comparar los resultados de forma visual y cuantitativa.
 
-\subsection{Requisitos previos}
+\subsection{Instalación del entorno}
 
 Para ejecutar la aplicación es necesario tener instaladas las siguientes dependencias:
 
 \begin{itemize}
-  \item \texttt{torch} y \texttt{torchvision}: framework de redes neuronales.
-  \item \texttt{opencv-python}: operaciones de visión por ordenador.
-  \item \texttt{pillow}: lectura y procesamiento de imágenes.
-  \item \texttt{scikit-image}: necesario para el cálculo de la métrica $\Delta E$.
-  \item \texttt{lpips}: necesario para el cálculo de la métrica LPIPS. Opcional; si no está instalado, dicha métrica mostrará \texttt{---}.
-  \item El paquete \texttt{ddcolor} instalado en modo desarrollo (\texttt{python setup.py develop}).
+	\item \texttt{Python}: Version superior o igual a 3.10
+	\item \texttt{PyTorch}: Version superior o igual a 1.7
+	\texttt{torchvision}: framework de redes neuronales.
+	\item \texttt{opencv-python}: operaciones de visión por ordenador.
+	\item \texttt{pillow}: lectura y procesamiento de imágenes.
+	\item \texttt{scikit-image}: necesario para el cálculo de la métrica $\Delta E$.
+	
 \end{itemize}
 
-Además, deben colocarse los pesos de los modelos en el directorio \texttt{./models/} con los siguientes nombres:
+\subsubsection{Creación del entorno}
+
+El siguiente comando crea un entorno Conda aislado con Python:
+
+\begin{verbatim}
+conda create -n ddcolor python=3.9
+conda activate ddcolor
+\end{verbatim}
+
+Como alternativa, puede crearse un entorno virtual independiente de Python:
+
+\begin{verbatim}
+python -m venv venv
+source venv/bin/activate        # Linux / macOS
+venv\Scripts\activate           # Windows
+\end{verbatim}
+
+\subsubsection{Dependencias}
+
+Una vez activado el entorno, se instala PyTorch con soporte para CUDA 11.8. Si no se dispone de GPU compatible, puede omitirse el argumento \texttt{--index-url} y se instalará la versión de CPU:
+
+\begin{verbatim}
+pip install torch==2.2.0 torchvision==0.17.0 \
+    --index-url https://download.pytorch.org/whl/cu118
+\end{verbatim}
+
+Las dependencias necesarias para ejecutar la inferencia se instalan con:
+
+\begin{verbatim}
+pip install -r requirements.txt
+\end{verbatim}
+
+\subsection{Descarga de modelos}
+
+Previo a la ejecución del programa, deben descargarse los pesos de los tres modelos que se evalúan y colocarse dentro de una carpeta \texttt{./models/} en la raíz del proyecto. \textbf{IMPORTANTE: Los archivos descargados de tipo \texttt{.bin} deben renombrarse con extensión \texttt{.pth}. Deben respetarse exactamente los nombres \texttt{ddcolor\_comic.pth}, \texttt{ddcolor\_realistic.pth} y \texttt{ddcolor\_artistic.pth}.}
+
+Los enlaces de descarga directa desde el navegador son:
 
 \begin{itemize}
-  \item \texttt{ddcolor\_comic.pth}: modelo fine-tuned sobre imágenes de cómic.
-  \item \texttt{ddcolor\_realistic.pth}: modelo oficial de ModelScope (realista).
-  \item \texttt{ddcolor\_artistic.pth}: modelo artístico de ModelScope.
+  \item \texttt{ddcolor\_comic.pth}: modelo fine-tuned sobre imágenes de cómic.\\
+  \url{https://huggingface.co/Aleparqui/PID_proyect/blob/main/net_g_latest.pth}
+
+  \item \texttt{ddcolor\_realistic.pth}: modelo oficial de ModelScope (realista).\\
+  \url{https://huggingface.co/piddnad/ddcolor_modelscope/blob/main/pytorch_model.bin}
+
+  \item \texttt{ddcolor\_artistic.pth}: modelo artístico de ModelScope.\\
+  \url{https://huggingface.co/piddnad/ddcolor_artistic/blob/main/pytorch_model.bin}
 \end{itemize}
 
-Si alguno de los pesos no está disponible, la aplicación entra automáticamente en \textbf{modo DEMO} para ese modelo, aplicando una colorización sintética de demostración sin necesidad de ejecutar la red neuronal.
+\subsubsection{Ejemplo de descarga desde el navegador}
+
+A continuación se ilustra el proceso con \texttt{ddcolor\_comic}. Repetir con cada modelo.
+
+\paragraph{PASO 1:} Acceder al enlace del modelo, en este caso:\\
+\url{https://huggingface.co/Aleparqui/PID_proyect/blob/main/net_g_latest.pth}
+
+\paragraph{PASO 2:} Pulsar el botón \textit{Download} situado en la parte superior izquierda de la página (ver Figura~\ref{fig:captura_hf}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{../assets/images/captura_hf.jpg}
+  \caption{Captura de Hugging Face para descargar el modelo.}
+  \label{fig:captura_hf}
+\end{figure}
+
+\paragraph{PASO 3:} Renombrar el archivo correctamente y colocarlo dentro de la carpeta \texttt{DDColor/models} (ver Figura~\ref{fig:captura_explorador}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.5\textwidth]{../assets/images/captura_explorador.jpg}
+  \caption{Captura del explorador de archivos con los pesos correctamente ubicados.}
+  \label{fig:captura_explorador}
+\end{figure}
+
+\subsubsection{Descarga programática}
+
+Como alternativa, los tres ficheros pueden descargarse automáticamente con \texttt{huggingface\_hub}:
+
+\begin{verbatim}
+pip install huggingface_hub
+
+from huggingface_hub import hf_hub_download
+
+# Modelo cómic (fine-tune propio)
+hf_hub_download(repo_id="Aleparqui/PID_proyect",
+                filename="net_g_latest.pth",
+                local_dir="./models/")
+# Renombrar a ddcolor_comic.pth
+
+# Modelo realista
+hf_hub_download(repo_id="piddnad/ddcolor_modelscope",
+                filename="pytorch_model.bin",
+                local_dir="./models/")
+# Renombrar a ddcolor_realistic.pth
+
+# Modelo artístico
+hf_hub_download(repo_id="piddnad/ddcolor_artistic",
+                filename="pytorch_model.bin",
+                local_dir="./models/")
+# Renombrar a ddcolor_artistic.pth
+\end{verbatim}
+
+Si alguno de los pesos no está disponible, la aplicación entra automáticamente en \textbf{modo DEMO} para ese modelo, aplicando una colorización sintética sin necesidad de ejecutar la red neuronal.
 
 \subsection{Puesta en marcha}
 
-Una vez cumplidos los requisitos, la aplicación se lanza ejecutando:
+Una vez cumplidos los requisitos y descargados los tres modelos, la aplicación se lanza ejecutando:
 
 \begin{verbatim}
 python ddcolor_desktop.py
 \end{verbatim}
 
-Al iniciarse, la aplicación carga los modelos en segundo plano e indica su estado en la esquina superior derecha de la ventana (\textit{Listo} en verde si todos los pesos se han cargado correctamente, o en ámbar si alguno opera en modo DEMO).
+\textbf{IMPORTANTE:} Al iniciarse, la aplicación carga los modelos en segundo plano e indica su estado en la esquina superior derecha de la ventana. Esperar a que carguen y a que aparezca el mensaje \textit{Listo} en verde.
 
 \subsection{Interfaz}
 
@@ -1180,12 +1274,11 @@ Pulsar el botón \textit{Ejecutar}. La barra de progreso indica que el proceso e
 
 \subsubsection{Consultar las métricas}
 
-Navegar a la pestaña \textbf{Métricas} para ver la tabla comparativa. Para cada métrica, se marca en verde el modelo que obtiene el mejor resultado. Las tres métricas disponibles son:
+Navegar a la pestaña \textbf{Métricas} para ver la tabla comparativa. Para cada métrica, se marca en verde el modelo que obtiene el mejor resultado. Las métricas disponibles son:
 
 \begin{itemize}
   \item $\Delta CF$: diferencia en viveza cromática respecto al ground truth. Valores cercanos a 0 indican que la paleta de color es similar a la referencia.
   \item $\Delta E_{2000}$: error colorimétrico perceptual medio píxel a píxel en el espacio CIELAB. Un valor menor implica mayor fidelidad de color.
-  \item \textit{LPIPS}: similitud perceptual basada en características de red neuronal. Un valor menor indica mayor parecido visual con el ground truth.
 \end{itemize}
 
 \subsubsection{Guardar los resultados}
@@ -1199,6 +1292,87 @@ Pulsar el botón \textit{Guardar resultados} para exportar las imágenes coloriz
 \end{itemize}
 
 Solo se exportan los modelos que estaban activos y produjeron un resultado.
+
+\subsection{Publicación de los pesos en Hugging Face}
+
+Con el objetivo de facilitar la reproducibilidad del trabajo y permitir que cualquier usuario pueda utilizar el modelo fine-tuned sin necesidad de reentrenarlo, los pesos resultantes del entrenamiento se han publicado en Hugging Face, una plataforma ampliamente utilizada en la comunidad de inteligencia artificial para alojar y compartir modelos, datasets y aplicaciones de forma pública y gratuita.
+
+Hugging Face organiza los modelos en repositorios con control de versiones basado en Git, de forma análoga a GitHub pero orientada específicamente a ficheros de gran tamaño como pesos de redes neuronales. Cada repositorio incluye una \textit{Model Card}, un documento en formato Markdown que describe el modelo, su entrenamiento y cómo utilizarlo.
+
+El repositorio del proyecto se encuentra en:
+
+\begin{center}
+  \url{https://huggingface.co/Aleparqui/PID_proyect}
+\end{center}
+
+\subsubsection{Contenido del repositorio}
+
+El repositorio está registrado como modelo de tipo \textit{Image-to-Image} con las etiquetas \texttt{image-colorization}, \texttt{ddcolor} y \texttt{comic-books}, lo que lo hace indexable y localizable dentro de la plataforma. Contiene dos elementos principales:
+
+\begin{itemize}
+  \item \textbf{Fichero de pesos} \texttt{net\_g\_latest.pth}: generado automáticamente por BasicSR al finalizar el entrenamiento. El nombre \texttt{latest} indica que corresponde al estado del generador en la última iteración completada. Este fichero es el que debe descargarse para usar el modelo en la aplicación o en cualquier script de inferencia.
+
+  \item \textbf{Model Card}: documento en formato Markdown redactado desde la interfaz web de Hugging Face. Recoge la descripción del modelo, el modelo base del que parte (\texttt{piddnad/ddcolor\_modelscope}), el dataset de entrenamiento empleado, los hiperparámetros principales y ejemplos de código para realizar inferencias.
+\end{itemize}
+
+\subsubsection{Proceso de subida}
+
+La subida de los pesos se realizó mediante la herramienta de línea de comandos \texttt{huggingface\_hub}, siguiendo estos pasos:
+
+\begin{enumerate}
+  \item \textbf{Creación de la cuenta y el repositorio} en \url{https://huggingface.co}. Al crear el repositorio se seleccionó el tipo \textit{Model} y se activó la visibilidad pública para que cualquier usuario pueda acceder a los pesos sin necesidad de autenticación.
+
+  \item \textbf{Instalación de la herramienta} en el entorno local:
+  \begin{verbatim}
+  pip install huggingface_hub
+  \end{verbatim}
+
+  \item \textbf{Autenticación local} mediante un token de acceso personal, generado desde los ajustes de la cuenta en la web de Hugging Face (\textit{Settings} $\rightarrow$ \textit{Access Tokens}):
+  \begin{verbatim}
+  huggingface-cli login
+  \end{verbatim}
+  El comando solicita el token por consola y lo almacena localmente para las operaciones posteriores.
+
+  \item \textbf{Subida del fichero de pesos} al repositorio:
+  \begin{verbatim}
+  huggingface-cli upload Aleparqui/PID_proyect \
+      ./models/net_g_latest.pth net_g_latest.pth
+  \end{verbatim}
+  El primer argumento es el identificador del repositorio en Hugging Face, el segundo es la ruta local del fichero y el tercero es el nombre con el que quedará almacenado en el repositorio.
+
+  \item \textbf{Redacción de la Model Card} directamente desde la interfaz web del repositorio, en la pestaña \textit{Model card}.
+\end{enumerate}
+
+\subsubsection{Descarga de los pesos}
+
+Una vez publicados, los pesos pueden descargarse de tres formas:
+
+\paragraph{Opción A --- Descarga programática con \texttt{huggingface\_hub} (recomendada):}
+\begin{verbatim}
+from huggingface_hub import hf_hub_download
+
+hf_hub_download(
+    repo_id="Aleparqui/PID_proyect",
+    filename="net_g_latest.pth",
+    local_dir="./models/"
+)
+\end{verbatim}
+
+\paragraph{Opción B --- CLI de Hugging Face:}
+\begin{verbatim}
+huggingface-cli download Aleparqui/PID_proyect \
+    net_g_latest.pth --local-dir ./models/
+\end{verbatim}
+
+\paragraph{Opción C --- Descarga directa desde el navegador:}
+
+Accediendo a la pestaña \textit{Files and versions} del repositorio o directamente a la URL:
+\begin{verbatim}
+https://huggingface.co/Aleparqui/PID_proyect/
+        resolve/main/net_g_latest.pth
+\end{verbatim}
+
+En los tres casos, el fichero descargado debe renombrarse a \texttt{ddcolor\_comic.pth} para que la aplicación \textit{DDColor Lab} lo detecte correctamente.
 
 \section{Conclusiones}
 
@@ -1256,27 +1430,165 @@ Siendo que ha sido un trabajo cuyos resultados no son satisfactorios del todo, p
 
 \section{Autoevaluación}
 
-Siguiendo la rúbrica dada, se debe detallar, por parte de  \textbf{cada miembro del grupo}, la puntuación para el trabajo que se considera justa en cada apartado. 
+En esta sección cada integrante del grupo detalla la puntuación para el trabajo que se considera justa en cada apartado de una rúbrica proporcionada por el profesorado. 
+
+\subsection{José Carlos Mora López}
+
+\begin{table}[h!]
+	\centering
+	\begin{tabular}{|l|l|}
+		\hline
+		\textbf{CRITERIO} & \textbf{PUNTUACIÓN} \\ \hline
+		
+		\multicolumn{2}{|l|}{\textbf{Exposición}} \\ \hline
+		Comprensión y dominio (puntúa triple) & No procede \\ \hline
+		Exposición didáctica & No procede \\ \hline
+		Integración del equipo & No procede \\ \hline
+		
+		\multicolumn{2}{|l|}{\textbf{Implementación}} \\ \hline
+		Objetivos (puntúa doble) & REGULAR \\ \hline
+		Aspectos didácticos & EXCELENTE \\ \hline
+		Experimentación y conclusiones & BIEN \\ \hline
+		
+		\multicolumn{2}{|l|}{\textbf{Documentación}} \\ \hline
+		Contenidos & BIEN \\ \hline
+		Divulgación de los contenidos & BIEN \\ \hline
+		Bibliografía. Recursos científicos & EXCELENTE \\ \hline
+		
+	\end{tabular}
+\end{table}
 
 \section{Tabla de tiempos}
 
-
-Se debe justificar el trabajo realizado por cada componente del grupo, indicando el {\bf tiempo total que cada miembro del grupo ha dedicado} al trabajo (lo que puede implicar diferencia de notas obtenidas por los distintos miembros del grupo). El trabajo realizado debe ser de {\bf 50 horas por estudiante}. Además, debe haber un plan de trabajo \textbf{individual} detallado con las {\bf tareas específicas realizadas por cada miembro} del grupo. Ejemplos de tareas son: implementación de la función "tal" del código; búsqueda de información y redacción del concepto "tal"; Generación de tabla ilustrativa para el proceso "tal". No son tareas: escribir la documentación; desarrollar código; hacer la presentación. Se puede usar la tabla siguiente o bien documentos generados por la herramienta de gestión de proyectos que se prefiera.
-
 \begin{center}
-\begin{tabular}{|c|c|c|c|}
+\begin{tabular}{|c|c|c|p{7cm}|}
 \hline
- Fecha de la
- actividad 
-& Tiempo (h)
-& Miembro
-& Actividad realizada
-\\\hline
-\mbox{ }&\mbox{}&\mbox{ }&\mbox{}\\
-\mbox{ }&\mbox{}&\mbox{ }&\mbox{}\\\hline
+\textbf{Fecha} & \textbf{Tiempo (h)} & \textbf{Miembro} & \textbf{Actividad realizada} \\\hline
+11/03/2026 & 02:00:00 & Guillermo Rodríguez & Buscar ideas para el proyecto \\\hline
+16/03/2026 & 01:50:00 & Guillermo Rodríguez & Lectura artículo ``A Novel Approach to Image Steganography Based on the Image Colorization'' \\\hline
+18/03/2026 & 01:01:45 & Guillermo Rodríguez & Lectura artículo \\\hline
+23/03/2026 & 01:50:00 & Guillermo Rodríguez & Despliegue modelo \\\hline
+05/04/2026 & 01:01:14 & Guillermo Rodríguez & Despliegue modelo \\\hline
+05/04/2026 & 00:33:25 & Guillermo Rodríguez & Despliegue modelo \\\hline
+05/04/2026 & 00:10:00 & Guillermo Rodríguez & Despliegue modelo \\\hline
+05/04/2026 & 00:47:40 & Guillermo Rodríguez & Despliegue modelo \\\hline
+05/04/2026 & 00:29:18 & Guillermo Rodríguez & Despliegue modelo \\\hline
+06/04/2026 & 00:29:22 & Guillermo Rodríguez & Prueba dataset Pokemon \\\hline
+06/04/2026 & 01:50:00 & Guillermo Rodríguez & Búsqueda de datasets y ajustes del entrenamiento \\\hline
+07/04/2026 & 01:10:11 & Guillermo Rodríguez & Lectura artículo \\\hline
+13/04/2026 & 01:27:06 & Guillermo Rodríguez & Investigación arquitectura \\\hline
+15/04/2026 & 00:45:48 & Guillermo Rodríguez & Investigación arquitectura \\\hline
+25/04/2026 & 00:10:42 & Guillermo Rodríguez & Elaboración de la memoria: Planteamiento teórico \\\hline
+25/04/2026 & 00:34:27 & Guillermo Rodríguez & Elaboración de la memoria: Planteamiento teórico \\\hline
+25/04/2026 & 00:38:44 & Guillermo Rodríguez & Investigación ConvNext \\\hline
+26/04/2026 & 00:18:37 & Guillermo Rodríguez & Investigación ConvNext \\\hline
+26/04/2026 & 00:32:50 & Guillermo Rodríguez & Elaboración de la memoria: Planteamiento teórico \\\hline
+26/04/2026 & 00:24:04 & Guillermo Rodríguez & Elaboración de la memoria: Planteamiento teórico \\\hline
+27/04/2026 & 00:31:01 & Guillermo Rodríguez & Investigación PixelShuffle \\\hline
+27/04/2026 & 00:19:49 & Guillermo Rodríguez & Investigación PixelShuffle \\\hline
+01/05/2026 & 00:51:16 & Guillermo Rodríguez & Elaboración de la memoria: Planteamiento teórico \\\hline
+02/05/2026 & 00:41:48 & Guillermo Rodríguez & Elaboración de la memoria: Planteamiento teórico \\\hline
+03/05/2026 & 00:14:32 & Guillermo Rodríguez & Elaboración de la memoria: Implementación \\\hline
+03/05/2026 & 00:18:14 & Guillermo Rodríguez & Elaboración de la memoria: Implementación \\\hline
+03/05/2026 & 00:42:22 & Guillermo Rodríguez & Elaboración de la memoria: Implementación \\\hline
+03/05/2026 & 00:09:21 & Guillermo Rodríguez & Elaboración de la memoria: Implementación \\\hline
+03/05/2026 & 00:28:15 & Guillermo Rodríguez & Elaboración de la memoria: Implementación \\\hline
+04/05/2026 & 00:15:03 & Guillermo Rodríguez & Elaboración de la memoria: Implementación \\\hline
+04/05/2026 & 00:20:14 & Guillermo Rodríguez & Elaboración de la memoria: Implementación \\\hline
+04/05/2026 & 00:26:20 & Guillermo Rodríguez & Elaboración de la memoria: Implementación \\\hline
+04/05/2026 & 00:09:00 & Guillermo Rodríguez & Comienzo presentación \\\hline
+09/05/2026 & 00:47:21 & Guillermo Rodríguez & Elaboración de la memoria: Implementación \\\hline
+09/05/2026 & 00:31:16 & Guillermo Rodríguez & Elaboración de la memoria: Implementación \\\hline
+10/05/2026 & 00:39:50 & Guillermo Rodríguez & Elaboración de la memoria: Implementación \\\hline
+10/05/2026 & 01:00:59 & Guillermo Rodríguez & Elaboración de la memoria: Implementación \\\hline
+10/05/2026 & 00:46:06 & Guillermo Rodríguez & Elaboración de la memoria: Implementación \\\hline
+10/05/2026 & 00:27:39 & Guillermo Rodríguez & Elaboración de la memoria: Implementación \\\hline
+\multicolumn{4}{|c|}{\textbf{Total Guillermo Rodríguez: 29:14:53}} \\\hline
 \end{tabular}
 \end{center}
 
+\bigskip
+
+\begin{center}
+\begin{tabular}{|c|c|c|p{7cm}|}
+\hline
+\textbf{Fecha} & \textbf{Tiempo (h)} & \textbf{Miembro} & \textbf{Actividad realizada} \\\hline
+11/03/2026 & 02:00:00 & Alejandro Parody Quirós & Clase 11/03 \\\hline
+16/03/2026 & 02:00:00 & Alejandro Parody Quirós & Clase 16/03 \\\hline
+17/03/2026 & 00:55:09 & Alejandro Parody Quirós & Creación documento entrega 1 \\\hline
+18/03/2026 & 02:00:00 & Alejandro Parody Quirós & Clase 18/03 \\\hline
+04/04/2026 & 01:06:00 & Alejandro Parody Quirós & Instalación y testeo muy básico \\\hline
+06/04/2026 & 02:00:00 & Alejandro Parody Quirós & Búsqueda de datasets \\\hline
+07/04/2026 & 01:11:00 & Alejandro Parody Quirós & Setting model for training y yml modification \\\hline
+15/04/2026 & 02:00:00 & Alejandro Parody Quirós & Revisión del training realizado / clase 15/04 \\\hline
+23/04/2026 & 01:39:00 & Alejandro Parody Quirós & Estudio de estructura y funcionamiento interno \\\hline
+25/04/2026 & 01:15:00 & Alejandro Parody Quirós & Configuración y training marvel \\\hline
+26/04/2026 & 02:12:00 & Alejandro Parody Quirós & Creación interfaz visual \\\hline
+26/04/2026 & 00:24:00 & Alejandro Parody Quirós & Creación documento entrega 2 \\\hline
+27/04/2026 & 02:00:00 & Alejandro Parody Quirós & Clase 27/04 \\\hline
+27/04/2026 & 00:55:00 & Alejandro Parody Quirós & Modificación interfaz visual \\\hline
+01/05/2026 & 00:53:00 & Alejandro Parody Quirós & Subida modelo a HuggingFace \\\hline
+01/05/2026 & 02:14:00 & Alejandro Parody Quirós & Arreglar la interfaz visual \\\hline
+03/05/2026 & 00:27:00 & Alejandro Parody Quirós & Documentación de seguimiento \\\hline
+05/05/2026 & 03:12:00 & Alejandro Parody Quirós & Refactor interfaz visual y adición de métricas \\\hline
+06/05/2026 & 01:06:00 & Alejandro Parody Quirós & Documentación manual de usuario \\\hline
+06/05/2026 & 01:18:00 & Alejandro Parody Quirós & Documentación manual de usuario \\\hline
+09/05/2026 & 01:03:00 & Alejandro Parody Quirós & Actualización de readme \\\hline
+09/05/2026 & 00:37:00 & Alejandro Parody Quirós & Documentación manual de usuario \\\hline
+09/05/2026 & 01:57:00 & Alejandro Parody Quirós & Documentación huggingface \\\hline
+10/05/2026 & 01:08:00 & Alejandro Parody Quirós & Documentación contribución propia \\\hline
+10/05/2026 & 00:36:00 & Alejandro Parody Quirós & Documentación contribución propia \\\hline
+10/05/2026 & 01:47:00 & Alejandro Parody Quirós & Documentación general \\\hline
+\multicolumn{4}{|c|}{\textbf{Total Alejandro Parody Quirós: 37:55:09}} \\\hline
+\end{tabular}
+\end{center}
+
+\bigskip
+
+\begin{center}
+\begin{tabular}{|c|c|c|p{7cm}|}
+\hline
+\textbf{Fecha} & \textbf{Tiempo (h)} & \textbf{Miembro} & \textbf{Actividad realizada} \\\hline
+11/03/2026 & 01:50:00 & José Carlos Mora López & Búsqueda de ideas para el trabajo en clase práctica \\\hline
+17/03/2026 & 00:41:01 & José Carlos Mora López & Lectura y análisis del documento y repositorio a trabajar \\\hline
+18/03/2026 & 00:05:49 & José Carlos Mora López & Trabajando sobre documento planificación \\\hline
+18/03/2026 & 01:33:11 & José Carlos Mora López & Trabajando sobre documento planificación. Trabajo en grupo en el aula \\\hline
+06/04/2026 & 01:09:10 & José Carlos Mora López & Lectura y comprensión del paper \\\hline
+06/04/2026 & 00:18:32 & José Carlos Mora López & Lectura y comprensión del paper \\\hline
+06/04/2026 & 00:21:51 & José Carlos Mora López & Creación documentos para el seguimiento número 2 \\\hline
+07/04/2026 & 01:35:10 & José Carlos Mora López & Creación documentación e introducción \\\hline
+07/04/2026 & 01:35:20 & José Carlos Mora López & Primer contacto con el código y uso de DDColor \\\hline
+08/04/2026 & 01:50:00 & José Carlos Mora López & Horas clase seguimiento 2 \\\hline
+14/04/2026 & 01:14:06 & José Carlos Mora López & Análisis de las métricas empleadas \\\hline
+26/04/2026 & 01:26:19 & José Carlos Mora López & Exploración de nuevas métricas a utilizar \\\hline
+26/04/2026 & 01:38:42 & José Carlos Mora López & Código implementación de métricas \\\hline
+27/04/2026 & 00:31:01 & José Carlos Mora López & Preparación del seguimiento 3 \\\hline
+27/04/2026 & 01:50:00 & José Carlos Mora López & Horas de clase seguimiento 3 \\\hline
+28/04/2026 & 01:10:25 & José Carlos Mora López & Cambiar GitHub readme para nuestro proyecto \\\hline
+28/04/2026 & 00:50:32 & José Carlos Mora López & Probando otros modelos del ModelZoo \\\hline
+28/04/2026 & 00:09:44 & José Carlos Mora López & Probando otros modelos del ModelZoo \\\hline
+29/04/2026 & 00:46:49 & José Carlos Mora López & Documentación sobre métricas \\\hline
+29/04/2026 & 00:06:05 & José Carlos Mora López & Documentación sobre métricas \\\hline
+29/04/2026 & 00:09:39 & José Carlos Mora López & Documentación sobre métricas \\\hline
+29/04/2026 & 01:06:55 & José Carlos Mora López & Documentación sobre métricas \\\hline
+02/05/2026 & 00:08:41 & José Carlos Mora López & Documentación sobre métricas \\\hline
+03/05/2026 & 02:11:57 & José Carlos Mora López & Documentación sobre métricas \\\hline
+03/05/2026 & 01:30:22 & José Carlos Mora López & Descargar modelo de HuggingFace y comprobar \\\hline
+03/05/2026 & 00:49:47 & José Carlos Mora López & Instalando entorno latex \\\hline
+03/05/2026 & 00:25:20 & José Carlos Mora López & Pasar de Word a LaTeX \\\hline
+03/05/2026 & 01:41:17 & José Carlos Mora López & Pasar de Word a LaTeX \\\hline
+04/05/2026 & 01:50:00 & José Carlos Mora López & Seguimiento 4 \\\hline
+05/05/2026 & 01:29:21 & José Carlos Mora López & Cambiando estructura explicación métricas a LaTeX \\\hline
+05/05/2026 & 00:49:19 & José Carlos Mora López & Cambiando estructura explicación métricas a LaTeX \\\hline
+09/05/2026 & 00:34:00 & José Carlos Mora López & Autoevaluación \\\hline
+09/05/2026 & 02:10:14 & José Carlos Mora López & Cambiar manual de usuario \\\hline
+09/05/2026 & 02:01:28 & José Carlos Mora López & Escribiendo conclusión \\\hline
+10/05/2026 & 00:35:49 & José Carlos Mora López & Fotomontajes \\\hline
+10/05/2026 & 01:07:58 & José Carlos Mora López & Escribiendo experimentación \\\hline
+10/05/2026 & 02:35:58 & José Carlos Mora López & Escribiendo experimentación \\\hline
+\multicolumn{4}{|c|}{\textbf{Total José Carlos Mora López: 43:27:22}} \\\hline
+\end{tabular}
+\end{center}
 
 \bibliography{main}{}
 \bibliographystyle{plainurl}
